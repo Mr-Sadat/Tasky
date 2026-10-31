@@ -636,3 +636,92 @@ class AIProfileContextInjectionTests(APITestCase):
         self.assertIn("07:30", system_content)
         self.assertIn("23:30", system_content)
         self.assertIn("هیچ تسکی قبل ۷:۳۰ چیده نشود", system_content)
+
+    def test_voice_to_plan_smart_rescheduling_updates_existing_task_no_duplicate(self):
+        """Test that asking to reschedule 'کدنویسی' to 10:00 updates the existing task without creating a duplicate."""
+        today = timezone.localdate()
+        task = Task.objects.create(
+            title="کدنویسی",
+            scheduled_time="07:54",
+            duration_minutes=30,
+            priority="high",
+            category="work",
+            date=today,
+        )
+
+        response = self.client.post(
+            "/api/voice-to-plan/",
+            {"text": "تسک کدنویسی رو بنداز برای ساعت ۱۰:۰۰"},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Ensure no duplicate was created
+        self.assertEqual(Task.objects.filter(date=today).count(), 1)
+
+        # Ensure existing task was updated
+        task.refresh_from_db()
+        self.assertEqual(task.scheduled_time.strftime("%H:%M"), "10:00")
+
+    def test_voice_to_plan_colloquial_rescheduling_pashimoon_shodam_no_duplicate(self):
+        """Test 'من پشیمون شدم ساعت ده میخوام شام بخورم' updates existing 'صرف شام' without duplicates."""
+        today = timezone.localdate()
+        task = Task.objects.create(
+            title="صرف شام",
+            scheduled_time="20:00",
+            duration_minutes=45,
+            priority="medium",
+            category="personal",
+            date=today,
+        )
+
+        response = self.client.post(
+            "/api/voice-to-plan/",
+            {"text": "من پشیمون شدم ساعت ده میخوام شام بخورم"},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Ensure no duplicate was created
+        self.assertEqual(Task.objects.filter(date=today).count(), 1)
+        task.refresh_from_db()
+        self.assertEqual(task.scheduled_time.strftime("%H:%M"), "22:00")
+
+    def test_voice_to_plan_colloquial_rescheduling_bezar_baraye_koodnevisi(self):
+        """Test 'تسک شروع کودنویسی رو بذار برای ساعت ده شب' matches 'کدنویسی' without duplicates."""
+        today = timezone.localdate()
+        task = Task.objects.create(
+            title="کدنویسی",
+            scheduled_time="19:54",
+            duration_minutes=60,
+            priority="high",
+            category="work",
+            date=today,
+        )
+
+        response = self.client.post(
+            "/api/voice-to-plan/",
+            {"text": "تسک شروع کودنویسی رو بذار برای ساعت ده شب"},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Ensure no duplicate was created
+        self.assertEqual(Task.objects.filter(date=today).count(), 1)
+        task.refresh_from_db()
+        self.assertEqual(task.scheduled_time.strftime("%H:%M"), "22:00")
+
+    def test_text_to_speech_view_endpoint(self):
+        """Test GET and POST on /api/tts/ endpoint."""
+        # Empty text should return 400
+        res_empty = self.client.get("/api/tts/")
+        self.assertEqual(res_empty.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Valid text should return 200 with audio/mpeg from Edge-TTS
+        res_valid = self.client.get("/api/tts/?text=سلام")
+        self.assertIn(res_valid.status_code, [status.HTTP_200_OK, status.HTTP_204_NO_CONTENT])
+        if res_valid.status_code == status.HTTP_200_OK:
+            self.assertEqual(res_valid["Content-Type"], "audio/mpeg")
+            self.assertGreater(len(res_valid.content), 0)
+
+

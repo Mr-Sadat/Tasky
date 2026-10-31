@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.model';
 
@@ -9,16 +9,27 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
   template: `
     <div class="space-y-3.5 pb-36">
       <!-- Section Header -->
-      <div class="flex items-center justify-between px-1">
+      <div class="flex items-center justify-between px-1 gap-2 flex-wrap">
         <div class="flex items-center gap-2">
           <span class="text-base font-bold text-slate-100">{{ getHeaderTitle() }}</span>
           <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-purple-300 border border-slate-700">
             {{ tasks.length }} کار
           </span>
+          <span class="text-xs text-slate-400">
+            ({{ completedCount() }} انجام شده)
+          </span>
         </div>
-        <div class="text-xs text-slate-400">
-          {{ completedCount() }} انجام شده
-        </div>
+
+        <!-- Share Today's Recap / Story Button -->
+        <button
+          type="button"
+          (click)="openStoryRecap.emit()"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-md shadow-purple-950/50 interactive-spring cursor-pointer border border-purple-400/30 select-none transition"
+          title="مشاهده و دریافت تصویر کارنامه روز برای استوری اینستاگرام / تلگرام (✨)"
+        >
+          <span>📜</span>
+          <span>کارنامه روز من</span>
+        </button>
       </div>
 
       <!-- Horizontal Persian Jalali Date Bar -->
@@ -46,117 +57,189 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
           <div class="text-5xl mb-3 select-none">🗓️</div>
           <h3 class="text-sm font-bold text-slate-200 mb-1">هنوز برنامه‌ای برای این تاریخ نداری!</h3>
           <p class="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
-            دکمه میکروفون پایین رو بزن و کارهایی که می‌خوای انجام بدی رو بگو (مثلاً: «۱۵ آبان باید برم دندونپزشکی») تا تَسکی هوشمندانه زمان‌بندی کنه.
+            دکمه میکروفون پایین رو بزن و کارهایی که می‌خوای انجام بدی رو بگو تا تَسکی هوشمندانه زمان‌بندی کنه.
           </p>
         </div>
       }
 
-      <!-- Timeline Task Cards -->
-      <div class="space-y-2.5">
+      <!-- Timeline Task Cards with Proportional Time-Blocking -->
+      <div class="space-y-3">
         @for (task of tasks; track task.id) {
+          @let isActive = isTaskActive(task);
           <div
-            class="group relative overflow-hidden rounded-2xl border transition-all duration-300 p-3.5 backdrop-blur-md"
-            [class.task-completed]="task.is_completed"
-            [ngClass]="task.is_completed 
-              ? 'bg-slate-900/60 border-slate-800/80 opacity-60 scale-[0.99]' 
-              : 'bg-slate-800/80 border-slate-700/70 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-950/20 interactive-spring'"
+            class="group relative overflow-hidden rounded-2xl border transition-all duration-300 p-3.5 backdrop-blur-md flex flex-col justify-between"
+            [ngClass]="[
+              getCardMinHeightClass(task.duration_minutes),
+              task.is_completed 
+                ? 'bg-slate-900/60 border-slate-800/80 opacity-60 scale-[0.99]' 
+                : isActive
+                  ? 'ring-2 ring-purple-400/90 shadow-xl shadow-purple-900/40 bg-gradient-to-r from-purple-950/80 via-slate-850 to-indigo-950/80 border-purple-500/50 scale-[1.01]'
+                  : 'bg-slate-800/80 border-slate-700/70 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-950/20 interactive-spring'
+            ]"
           >
             <!-- Vertical decorative time accent line -->
             <div 
-              class="absolute top-0 right-0 bottom-0 w-1 rounded-r-2xl transition-all duration-300"
-              [ngClass]="getPriorityLineColor(task.priority)"
+              class="absolute top-0 right-0 bottom-0 w-1.5 rounded-r-2xl transition-all duration-300"
+              [ngClass]="isActive ? 'bg-gradient-to-b from-purple-400 to-emerald-400 animate-pulse' : getPriorityLineColor(task.priority)"
             ></div>
 
-            <div class="flex items-start gap-3">
-              <!-- Checkbox with bounce interaction -->
-              <button
-                type="button"
-                (click)="toggleCompletion(task)"
-                class="shrink-0 mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 active:scale-90 focus:outline-none focus:ring-2 focus:ring-purple-400/40 cursor-pointer"
-                [ngClass]="task.is_completed 
-                  ? 'bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/30' 
-                  : 'border-slate-500 hover:border-purple-400 hover:scale-105 bg-slate-900/50'"
-                [title]="task.is_completed ? 'علامت به عنوان انجام‌نشده' : 'علامت به عنوان انجام‌شده'"
-                aria-label="تغییر وضعیت تسک"
-              >
-                @if (task.is_completed) {
-                  <svg class="w-4 h-4 fill-none stroke-current stroke-3 animate-breathing" viewBox="0 0 24 24">
-                    <polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                }
-              </button>
+            <div>
+              <div class="flex items-start gap-3">
+                <!-- Checkbox with bounce interaction -->
+                <button
+                  type="button"
+                  (click)="toggleCompletion(task)"
+                  class="shrink-0 mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 active:scale-90 focus:outline-none focus:ring-2 focus:ring-purple-400/40 cursor-pointer"
+                  [ngClass]="task.is_completed 
+                    ? 'bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/30' 
+                    : 'border-slate-500 hover:border-purple-400 hover:scale-105 bg-slate-900/50'"
+                  [title]="task.is_completed ? 'علامت به عنوان انجام‌نشده' : 'علامت به عنوان انجام‌شده'"
+                  aria-label="تغییر وضعیت تسک"
+                >
+                  @if (task.is_completed) {
+                    <svg class="w-4 h-4 fill-none stroke-current stroke-3" viewBox="0 0 24 24">
+                      <polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  }
+                </button>
 
-              <!-- Category Icon Container -->
-              <div class="shrink-0 w-10 h-10 rounded-xl bg-slate-900/80 border border-slate-700/60 flex items-center justify-center text-lg shadow-inner select-none transition-transform duration-200 group-hover:scale-105">
-                {{ getCategoryEmoji(task.icon) }}
-              </div>
-
-              <!-- Main Details: Multi-line wrapped title and notification text -->
-              <div class="flex-1 min-w-0">
-                <div class="flex items-start justify-between gap-2.5 mb-1.5">
-                  <!-- Title: wrapping naturally without ellipsis truncation -->
-                  <h4 
-                    class="text-sm font-semibold leading-relaxed break-words transition-colors duration-300 task-strike-through flex-1 min-w-0"
-                    [class.text-slate-400]="task.is_completed"
-                    [class.text-slate-100]="!task.is_completed"
-                  >
-                    {{ task.title }}
-                  </h4>
-
-                  <!-- Time & Duration Badge -->
-                  <div class="shrink-0 flex items-center gap-1.5 text-xs text-purple-300 font-mono bg-purple-950/60 px-2 py-0.5 rounded-md border border-purple-800/40 mt-0.5">
-                    <span>{{ formatTime(task.scheduled_time) }}</span>
-                    <span class="text-purple-400/60">•</span>
-                    <span>{{ task.duration_minutes }}د</span>
-                  </div>
+                <!-- Category Icon Container with Active Animation -->
+                <div 
+                  class="shrink-0 w-10 h-10 rounded-xl bg-slate-900/80 border border-slate-700/60 flex items-center justify-center text-lg shadow-inner select-none transition-transform duration-200 group-hover:scale-105"
+                  [class.animate-bounce]="isActive"
+                  [style.animation-duration]="'2.5s'"
+                >
+                  {{ getCategoryEmoji(task.icon) }}
                 </div>
 
-                <!-- Notification Preview (wrapping naturally without ellipsis truncation) -->
-                @if (task.notification_text) {
-                  <div class="mt-2 pt-2 border-t border-slate-700/40">
-                    <p class="text-xs text-slate-300/90 leading-relaxed break-words flex items-start gap-1.5" [title]="task.notification_text">
-                      <span class="text-amber-400/90 select-none shrink-0 mt-0.5">🔔</span>
-                      <span class="break-words flex-1 min-w-0">{{ task.notification_text }}</span>
-                    </p>
-                  </div>
-                }
+                <!-- Main Details -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-start justify-between gap-2.5 mb-1">
+                    <!-- Title -->
+                    <h4 
+                      class="text-sm font-semibold leading-relaxed break-words transition-colors duration-300 flex-1 min-w-0"
+                      [class.text-slate-400]="task.is_completed"
+                      [class.line-through]="task.is_completed"
+                      [class.text-white]="!task.is_completed && isActive"
+                      [class.text-slate-100]="!task.is_completed && !isActive"
+                    >
+                      {{ task.title }}
+                    </h4>
 
-                <!-- Footer row: Date badge, priority, and delete action -->
-                <div class="flex items-center justify-between gap-2 mt-2.5 pt-1.5 border-t border-slate-700/30">
-                  <!-- Jalali Date Tag (if not today or viewing all) -->
-                  @if (shouldShowDateBadge(task)) {
-                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                      <span>📅</span>
-                      <span>{{ task.jalali_display || task.jalali_date || task.date }}</span>
-                    </span>
-                  } @else {
-                    <div></div>
+                    <!-- Badges Row: Active Status & Time/Duration -->
+                    <div class="shrink-0 flex items-center gap-1.5">
+                      @if (isActive) {
+                        <!-- Animated In-Progress Pill -->
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold shadow-sm shadow-emerald-950/40 animate-pulse">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                          <span>در حال انجام</span>
+                        </span>
+                      }
+
+                      <!-- Time & Duration Badge -->
+                      <div class="flex items-center gap-1 text-xs text-purple-300 font-mono bg-purple-950/60 px-2 py-0.5 rounded-md border border-purple-800/40">
+                        <span>{{ formatTime(task.scheduled_time) }}</span>
+                        <span class="text-purple-400/60">•</span>
+                        <span>{{ task.duration_minutes }}د</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Notification / Description preview -->
+                  @if (task.notification_text) {
+                    <div class="mt-1.5 pt-1.5 border-t border-slate-700/30">
+                      <p class="text-xs text-slate-300/90 leading-relaxed break-words flex items-start gap-1.5">
+                        <span class="text-amber-400/90 select-none shrink-0 mt-0.5">🔔</span>
+                        <span class="break-words flex-1 min-w-0">{{ task.notification_text }}</span>
+                      </p>
+                    </div>
                   }
 
-                  <div class="flex items-center gap-1.5 shrink-0">
-                    <!-- Priority badge -->
-                    <span 
-                      class="text-[10px] font-semibold px-2 py-0.5 rounded-full border"
-                      [ngClass]="getPriorityBadgeClass(task.priority)"
-                    >
-                      {{ getPriorityLabel(task.priority) }}
-                    </span>
-
-                    <!-- Delete button -->
-                    <button
-                      type="button"
-                      (click)="confirmDelete(task)"
-                      class="opacity-60 hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition cursor-pointer"
-                      title="حذف تسک"
-                      aria-label="حذف تسک"
-                    >
-                      <svg class="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-                        <polyline points="3 6 5 6 21 6" stroke-linecap="round"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-linecap="round"/>
-                      </svg>
-                    </button>
-                  </div>
+                  <!-- Active Task Real-Time Progress Bar -->
+                  @if (isActive) {
+                    <div class="mt-2.5 pt-2 border-t border-purple-500/20">
+                      <div class="flex items-center justify-between text-[10px] text-purple-300 mb-1">
+                        <span>پیشرفت زمان تسک:</span>
+                        <span class="font-mono font-bold">{{ getActiveTaskProgress(task) }}%</span>
+                      </div>
+                      <div class="w-full bg-slate-900/90 rounded-full h-1.5 overflow-hidden border border-purple-500/30">
+                        <div 
+                          class="bg-gradient-to-r from-purple-500 to-emerald-400 h-full rounded-full transition-all duration-500" 
+                          [style.width.%]="getActiveTaskProgress(task)"
+                        ></div>
+                      </div>
+                    </div>
+                  }
                 </div>
+              </div>
+            </div>
+
+            <!-- Footer Row: Date badge, Quick Micro-Actions (+15m, +30m, Tomorrow) & Delete -->
+            <div class="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-slate-700/40 flex-wrap">
+              <!-- Left side: Jalali date or priority badge -->
+              <div class="flex items-center gap-1.5">
+                @if (shouldShowDateBadge(task)) {
+                  <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    <span>📅</span>
+                    <span>{{ task.jalali_display || task.jalali_date || task.date }}</span>
+                  </span>
+                }
+                <!-- Priority badge -->
+                <span 
+                  class="text-[10px] font-semibold px-2 py-0.5 rounded-full border"
+                  [ngClass]="getPriorityBadgeClass(task.priority)"
+                >
+                  {{ getPriorityLabel(task.priority) }}
+                </span>
+              </div>
+
+              <!-- Right side: Quick Reschedule Micro-Actions + Delete -->
+              <div class="flex items-center gap-1">
+                @if (!task.is_completed) {
+                  <!-- +15m Button -->
+                  <button
+                    type="button"
+                    (click)="onAddMinutes(task, 15)"
+                    class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-900/80 hover:bg-purple-900/50 text-slate-300 hover:text-purple-200 border border-slate-700 hover:border-purple-500/40 transition cursor-pointer"
+                    title="موکول کردن ۱۵ دقیقه به جلو"
+                  >
+                    +۱۵د
+                  </button>
+
+                  <!-- +30m Button -->
+                  <button
+                    type="button"
+                    (click)="onAddMinutes(task, 30)"
+                    class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-900/80 hover:bg-purple-900/50 text-slate-300 hover:text-purple-200 border border-slate-700 hover:border-purple-500/40 transition cursor-pointer"
+                    title="موکول کردن ۳۰ دقیقه به جلو"
+                  >
+                    +۳۰د
+                  </button>
+
+                  <!-- Reschedule to Tomorrow Button -->
+                  <button
+                    type="button"
+                    (click)="onMoveToTomorrow(task)"
+                    class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-900/80 hover:bg-indigo-900/50 text-slate-300 hover:text-indigo-200 border border-slate-700 hover:border-indigo-500/40 transition cursor-pointer"
+                    title="انتقال تسک به فردا"
+                  >
+                    فردا ⏭
+                  </button>
+                }
+
+                <!-- Delete button -->
+                <button
+                  type="button"
+                  (click)="confirmDelete(task)"
+                  class="opacity-60 hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition cursor-pointer"
+                  title="حذف تسک"
+                  aria-label="حذف تسک"
+                >
+                  <svg class="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                    <polyline points="3 6 5 6 21 6" stroke-linecap="round"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-linecap="round"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -165,13 +248,36 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
     </div>
   `
 })
-export class TaskTimelineComponent {
+export class TaskTimelineComponent implements OnInit, OnDestroy {
   @Input() tasks: Task[] = [];
   @Input() selectedDate: string = 'today';
   @Input() dateTabs: JalaliDateTab[] = [];
+  
   @Output() dateSelected = new EventEmitter<string>();
   @Output() toggleTask = new EventEmitter<{ task: Task; isCompleted: boolean }>();
   @Output() deleteTask = new EventEmitter<Task>();
+  @Output() rescheduleTask = new EventEmitter<{ task: Task; minutesToAdd?: number; toTomorrow?: boolean }>();
+  @Output() openStoryRecap = new EventEmitter<void>();
+
+  private clockTimer: any = null;
+  readonly nowMinutes = signal<number>(this.calculateNowMinutes());
+
+  ngOnInit(): void {
+    this.clockTimer = setInterval(() => {
+      this.nowMinutes.set(this.calculateNowMinutes());
+    }, 15000); // Check every 15 seconds
+  }
+
+  ngOnDestroy(): void {
+    if (this.clockTimer) {
+      clearInterval(this.clockTimer);
+    }
+  }
+
+  private calculateNowMinutes(): number {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
 
   selectDate(dateValue: string): void {
     this.dateSelected.emit(dateValue);
@@ -201,9 +307,54 @@ export class TaskTimelineComponent {
 
   formatTime(timeStr: string): string {
     if (!timeStr) return '';
-    // Format "09:00:00" to "09:00"
     const parts = timeStr.split(':');
     return `${parts[0]}:${parts[1]}`;
+  }
+
+  /**
+   * Proportional Card Heights for Time-Blocking
+   */
+  getCardMinHeightClass(durationMinutes: number): string {
+    const dur = durationMinutes || 30;
+    if (dur <= 20) return 'min-h-[85px]';
+    if (dur <= 45) return 'min-h-[105px]';
+    if (dur <= 75) return 'min-h-[125px]';
+    if (dur <= 100) return 'min-h-[145px]';
+    return 'min-h-[170px]';
+  }
+
+  /**
+   * Check if task is actively taking place right now
+   */
+  isTaskActive(task: Task): boolean {
+    if (task.is_completed || !task.scheduled_time) return false;
+
+    // Check if task is for today
+    const todayIso = new Date().toISOString().split('T')[0];
+    if (task.date && task.date !== todayIso) return false;
+
+    const parts = task.scheduled_time.split(':');
+    if (parts.length < 2) return false;
+
+    const startMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    const duration = task.duration_minutes || 30;
+    const endMinutes = startMinutes + duration;
+    const current = this.nowMinutes();
+
+    return current >= startMinutes && current < endMinutes;
+  }
+
+  /**
+   * Calculate % progress of ongoing active task
+   */
+  getActiveTaskProgress(task: Task): number {
+    if (!task.scheduled_time) return 0;
+    const parts = task.scheduled_time.split(':');
+    const startMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    const duration = task.duration_minutes || 30;
+    const elapsed = this.nowMinutes() - startMinutes;
+
+    return Math.max(0, Math.min(100, Math.round((elapsed / duration) * 100)));
   }
 
   getCategoryEmoji(icon: TaskIcon | string): string {
@@ -256,6 +407,20 @@ export class TaskTimelineComponent {
     this.toggleTask.emit({
       task,
       isCompleted: !task.is_completed
+    });
+  }
+
+  onAddMinutes(task: Task, minutes: number): void {
+    this.rescheduleTask.emit({
+      task,
+      minutesToAdd: minutes
+    });
+  }
+
+  onMoveToTomorrow(task: Task): void {
+    this.rescheduleTask.emit({
+      task,
+      toTomorrow: true
     });
   }
 

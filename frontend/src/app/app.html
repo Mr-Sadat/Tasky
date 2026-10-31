@@ -132,6 +132,10 @@
           [state]="avatarState()"
           [voiceReply]="avatarVoiceReply()"
           [transcribedText]="transcribedText()"
+          [activeTask]="activeTask()"
+          [nextTask]="nextTask()"
+          [sleepTime]="userProfile()?.sleep_time || '23:00'"
+          [wakeTime]="userProfile()?.wake_time || '07:00'"
           (studioClick)="themeService.openStudio()"
         ></app-avatar-card>
 
@@ -142,6 +146,8 @@
           [dateTabs]="dateTabs()"
           (dateSelected)="onDateSelected($event)"
           (toggleTask)="onToggleTask($event)"
+          (rescheduleTask)="onRescheduleTask($event)"
+          (openStoryRecap)="openStoryModal()"
           (deleteTask)="onDeleteTask($event)"
         ></app-task-timeline>
       </div>
@@ -171,6 +177,17 @@
           (close)="closeProfileModal()"
           (saved)="onProfileSaved($event)"
         ></app-profile-modal>
+      }
+
+      <!-- Aesthetic Daily Story / Recap Modal -->
+      @if (isStoryModalOpen()) {
+        <app-daily-recap-modal
+          [tasks]="tasks()"
+          [userProfile]="userProfile()"
+          [formattedDate]="formattedTodayDate()"
+          (close)="closeStoryModal()"
+          (toast)="showToast($event)"
+        ></app-daily-recap-modal>
       }
 
       <!-- AI Thinking Loading Modal Overlay -->

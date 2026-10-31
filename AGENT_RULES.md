@@ -17,7 +17,8 @@
 1. **No Duplicate Work:** Always inspect existing directories (`backend/`, `frontend/`) before creating files. Keep a clean monorepo structure (`backend/` and `frontend/` in the root).
 2. **Self-Testing Mandatory:** Do NOT mark a phase complete until you run `python manage.py test` (for backend) or build checks (for frontend) in the terminal and fix all errors yourself.
 3. **CORS & Ports:** Backend runs on `http://localhost:8000`, Frontend runs on `http://localhost:4200`. Enable CORS for `localhost:4200` from Day 1.
-4. **Structured AI Output Contract:** The AI service MUST always return this exact JSON structure:
+4. **Persian Language & RTL Alignment Mandatory:** All user communications, UI texts, and chat outputs MUST be in Persian and strictly right-aligned (RTL). UI components must enforce `dir="rtl"` with proper right text alignment.
+5. **Structured AI Output Contract:** The AI service MUST always return this exact JSON structure:
 ```json
 {
   "raw_transcribed_text": "متن پیاده شده از صدای کاربر",
@@ -99,3 +100,5 @@ Phase 3: Cute Avatar Animations (Rive/Lottie) & Local Notifications (Wait for Ow
 [x] Phase 3: Polish, Avatar Animations & Notifications
 
 [x] Phase 4: Personalized Onboarding Wizard & Dynamic AI Guidelines (Schedule & Tone Context Injection)
+
+[x] Phase 5: Viral Productivity Enhancements (Dynamic Time-Blocking, Contextual Avatar Costumes, Voice-Back TTS & Aesthetic Story Card)

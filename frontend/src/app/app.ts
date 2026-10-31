@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from './services/api.service';
 import { NotificationService } from './services/notification.service';
 import { ThemeService } from './services/theme.service';
+import { TtsService } from './services/tts.service';
 import { Task, AvatarState, VoiceToPlanResponse, JalaliDateTab, AvatarCustomization, UserProfile } from './models/task.model';
 import { AvatarCardComponent } from './components/avatar-card/avatar-card.component';
 import { VoiceInputComponent } from './components/voice-input/voice-input.component';
@@ -10,6 +11,7 @@ import { TaskTimelineComponent } from './components/task-timeline/task-timeline.
 import { AvatarStudioModalComponent } from './components/avatar-studio-modal/avatar-studio-modal.component';
 import { WizardComponent } from './components/wizard/wizard.component';
 import { ProfileModalComponent } from './components/profile-modal/profile-modal.component';
+import { DailyRecapModalComponent } from './components/daily-recap-modal/daily-recap-modal.component';
 
 @Component({
   selector: 'app-root',
@@ -22,6 +24,7 @@ import { ProfileModalComponent } from './components/profile-modal/profile-modal.
     AvatarStudioModalComponent,
     WizardComponent,
     ProfileModalComponent,
+    DailyRecapModalComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -30,6 +33,7 @@ export class App implements OnInit {
   private readonly apiService = inject(ApiService);
   readonly notifications = inject(NotificationService);
   readonly themeService = inject(ThemeService);
+  readonly ttsService = inject(TtsService);
 
   readonly tasks = signal<Task[]>([]);
   readonly avatarState = signal<AvatarState>('idle');
@@ -45,7 +49,51 @@ export class App implements OnInit {
   readonly userProfile = signal<UserProfile | null>(null);
   readonly isWizardActive = signal<boolean>(false);
   readonly isProfileModalOpen = signal<boolean>(false);
+  readonly isStoryModalOpen = signal<boolean>(false);
   readonly isCheckingProfile = signal<boolean>(true);
+
+  /**
+   * Computed: identifies the task currently in progress based on real-world time
+   */
+  readonly activeTask = computed(() => {
+    const list = this.tasks();
+    const todayIso = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    return list.find((t) => {
+      if (t.is_completed || !t.scheduled_time) return false;
+      if (t.date && t.date !== todayIso) return false;
+
+      const parts = t.scheduled_time.split(':');
+      if (parts.length < 2) return false;
+
+      const start = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      const end = start + (t.duration_minutes || 30);
+      return nowMinutes >= start && nowMinutes < end;
+    }) || null;
+  });
+
+  /**
+   * Computed: identifies the next upcoming task today within the next 2 hours
+   */
+  readonly nextTask = computed(() => {
+    const list = this.tasks();
+    const todayIso = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    return list.find((t) => {
+      if (t.is_completed || !t.scheduled_time) return false;
+      if (t.date && t.date !== todayIso) return false;
+
+      const parts = t.scheduled_time.split(':');
+      if (parts.length < 2) return false;
+
+      const start = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      return start > nowMinutes && start <= nowMinutes + 120;
+    }) || null;
+  });
 
   ngOnInit(): void {
     this.initDateLabel();
@@ -109,6 +157,14 @@ export class App implements OnInit {
 
   closeProfileModal(): void {
     this.isProfileModalOpen.set(false);
+  }
+
+  openStoryModal(): void {
+    this.isStoryModalOpen.set(true);
+  }
+
+  closeStoryModal(): void {
+    this.isStoryModalOpen.set(false);
   }
 
   onProfileSaved(updated: UserProfile): void {
@@ -280,10 +336,15 @@ export class App implements OnInit {
     this.avatarState.set(response.avatar_reaction.mood || 'supportive');
     this.transcribedText.set(response.raw_transcribed_text);
 
+    // Feature 3: Voice-Back Audio Feedback
+    if (response.avatar_reaction.voice_reply) {
+      this.ttsService.speak(response.avatar_reaction.voice_reply);
+    }
+
     // Refresh task list for current view
     this.loadTasks();
 
-    // Check if any task was scheduled for a non-today date (e.g. "۱۵ آبان")
+    // Check if any task was scheduled for a non-today date
     const todayIso = new Date().toISOString().split('T')[0];
     const nonTodayTask = response.tasks.find((t) => t.date && t.date !== todayIso);
 
@@ -316,7 +377,9 @@ export class App implements OnInit {
         );
         if (isCompleted) {
           this.avatarState.set('happy');
-          this.avatarVoiceReply.set(`آفرین! تسک "${task.title}" تموم شد! 🎉`);
+          const reply = `آفرین! تسک "${task.title}" تموم شد! 🎉`;
+          this.avatarVoiceReply.set(reply);
+          this.ttsService.speak(reply);
         }
       },
       error: (err) => {
@@ -328,6 +391,66 @@ export class App implements OnInit {
         this.errorMessage.set('خطا در به‌روزرسانی وضعیت تسک.');
       }
     });
+  }
+
+  /**
+   * Feature 1: Micro-Action inline rescheduling (+15m, +30m, Tomorrow)
+   */
+  onRescheduleTask(event: { task: Task; minutesToAdd?: number; toTomorrow?: boolean }): void {
+    const { task, minutesToAdd, toTomorrow } = event;
+
+    if (minutesToAdd) {
+      const parts = (task.scheduled_time || '12:00').split(':');
+      let hours = parseInt(parts[0], 10);
+      let mins = parseInt(parts[1], 10) + minutesToAdd;
+
+      while (mins >= 60) {
+        hours = (hours + 1) % 24;
+        mins -= 60;
+      }
+
+      const newTime = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+
+      // Optimistic update
+      this.tasks.update((current) =>
+        current.map((t) => (t.id === task.id ? { ...t, scheduled_time: newTime } : t))
+      );
+
+      this.apiService.updateTask(task.id, { scheduled_time: newTime }).subscribe({
+        next: (updated) => {
+          this.tasks.update((current) =>
+            current.map((t) => (t.id === updated.id ? updated : t))
+          );
+          this.showToast(`تسک "${task.title}" به ساعت ${newTime} موکول شد ⏰`);
+        },
+        error: (err) => {
+          console.error('Failed to reschedule task time:', err);
+          this.loadTasks();
+          this.errorMessage.set('خطا در جابه‌جایی ساعت تسک.');
+        }
+      });
+    } else if (toTomorrow) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowIso = tomorrow.toISOString().split('T')[0];
+
+      // Optimistic update
+      this.tasks.update((current) =>
+        current.filter((t) => t.id !== task.id)
+      );
+
+      this.apiService.updateTask(task.id, { date: tomorrowIso }).subscribe({
+        next: () => {
+          this.showToast(`تسک "${task.title}" به فردا منتقل شد ⏭`);
+          this.loadTasks();
+        },
+        error: (err) => {
+          console.error('Failed to move task to tomorrow:', err);
+          this.loadTasks();
+          this.errorMessage.set('خطا در انتقال تسک به فردا.');
+        }
+      });
+    }
   }
 
   onDeleteTask(task: Task): void {

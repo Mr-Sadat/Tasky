@@ -1,5 +1,11 @@
+import re
+import asyncio
+import os
+import logging
 import datetime
+import openai
 from django.utils import timezone
+from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -19,13 +25,30 @@ from .ai_service import (
     generate_ai_guidelines,
 )
 
+logger = logging.getLogger(__name__)
+
+
+def normalize_persian_text(s: str) -> str:
+    """Normalizes Persian/Arabic characters, removes diacritics, ZWNJ, and extra spaces for robust matching."""
+    if not s:
+        return ""
+    # Remove Arabic diacritics / tatweel
+    s = re.sub(r'[\u064B-\u065F\u0640]', '', str(s))
+    # Replace Arabic kaf and yeh with Persian kaf and yeh
+    s = s.replace("ي", "ی").replace("ك", "ک").replace("ى", "ی")
+    # Remove zero-width non-joiners and whitespace
+    s = s.replace("\u200c", "").replace("\u200d", "").replace(" ", "").lower().strip()
+    # Normalize speech transcriptions (e.g. کودنویسی -> کدنویسی)
+    s = s.replace("کودنویسی", "کدنویسی")
+    return s
+
 
 class VoiceToPlanView(APIView):
     """
     POST /api/voice-to-plan/
     Accepts audio file (multipart/form-data) or text input (JSON),
-    processes it through the AI service, creates VoiceLog and Task records in SQLite,
-    and returns the structured response with task database IDs.
+    processes it through the AI service, updates existing tasks (if rescheduling/completing/canceling)
+    or creates new Task records, and returns the structured response.
     """
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
@@ -58,11 +81,26 @@ class VoiceToPlanView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Process through AI service
+        # Query existing tasks for target_date to provide context to the AI
+        existing_tasks_qs = list(Task.objects.filter(date=target_date).order_by("scheduled_time"))
+        existing_tasks_payload = [
+            {
+                "id": t.id,
+                "title": t.title,
+                "scheduled_time": t.scheduled_time.strftime("%H:%M") if t.scheduled_time else "12:00",
+                "duration_minutes": t.duration_minutes,
+                "is_completed": t.is_completed,
+                "date": t.date.isoformat(),
+            }
+            for t in existing_tasks_qs
+        ]
+
+        # Process through AI service with existing tasks context
         ai_result = process_voice_to_tasks(
             audio_file=audio_file,
             text_input=str(text_input) if text_input else None,
             current_time_str=str(current_time_str),
+            existing_tasks=existing_tasks_payload,
         )
 
         # Save VoiceLog
@@ -74,9 +112,25 @@ class VoiceToPlanView(APIView):
             avatar_reply=avatar_reaction.get("voice_reply", ""),
         )
 
-        # Save extracted Task items
+        # Comprehensive Reschedule & Modification Intent Detection
+        raw_lower = raw_text.lower()
+        avatar_reply_lower = str(avatar_reaction.get("voice_reply", "")).lower()
+        reschedule_keywords = [
+            "بنداز", "بندازش", "بذار", "بذارش", "بگذار", "بگذار برای", "بذار برای",
+            "جابه‌جا", "جابجا", "جا به جا", "انتقال", "منتقل",
+            "موکول", "عقب", "جلو", "دیرتر", "زودتر",
+            "تغییر", "عوض", "ویرایش", "اصلاح", "تعویض",
+            "پشیمون", "پشیمان", "نمیخوام", "نمی‌خوام", "کنسل", "انصراف",
+            "به جای", "به جا", "جای ساعت", "تنظیم کن برای", "ست کن برای",
+        ]
+        is_reschedule_intent = (
+            any(kw in raw_lower for kw in reschedule_keywords) or
+            any(kw in avatar_reply_lower for kw in ["منتقل کردم", "جابه‌جا کردم", "جابجا کردم", "تغییر دادم", "عوض کردم", "تنظیم کردم", "موکول شد"])
+        )
+
         tasks_data = ai_result.get("tasks", [])
-        created_tasks = []
+        result_tasks = []
+
         for item in tasks_data:
             time_val = item.get("scheduled_time", "12:00")
             if hasattr(time_val, "strftime"):
@@ -103,6 +157,10 @@ class VoiceToPlanView(APIView):
             if hasattr(category_val, "value"):
                 category_val = category_val.value
 
+            action = str(item.get("action", "create")).lower()
+            existing_id = item.get("existing_task_id")
+            title = str(item.get("title") or "تسک").strip()
+
             # Resolve task date: check task-specific scheduled_date or jalali_date, else fallback to target_date
             if target_date_str:
                 task_date = target_date
@@ -113,8 +171,95 @@ class VoiceToPlanView(APIView):
                     default_date=target_date,
                 )
 
+            # Match existing task if any
+            matched_task = None
+            if existing_id:
+                matched_task = Task.objects.filter(id=existing_id).first()
+
+            if not matched_task:
+                clean_item_title = normalize_persian_text(title)
+                norm_raw = normalize_persian_text(raw_text)
+
+                # 1. Exact or normalized title match
+                for ex in existing_tasks_qs:
+                    norm_ex = normalize_persian_text(ex.title)
+                    if norm_ex and norm_item_title and (norm_ex == norm_item_title or norm_ex in norm_item_title or norm_item_title in norm_ex):
+                        matched_task = ex
+                        break
+
+                # 2. Match if existing task title is explicitly mentioned in user raw voice/text
+                if not matched_task and norm_raw:
+                    for ex in existing_tasks_qs:
+                        norm_ex = normalize_persian_text(ex.title)
+                        if len(norm_ex) >= 3 and norm_ex in norm_raw:
+                            matched_task = ex
+                            break
+
+                # 3. Match common root activity keywords (e.g. شام, ناهار, صبحانه, ورزش, کدنویسی, باشگاه, مطالعه, جلسه)
+                if not matched_task:
+                    activity_keywords = ["شام", "ناهار", "صبحانه", "ورزش", "کدنویسی", "باشگاه", "مطالعه", "کلاس", "جلسه", "پیاده‌روی", "خواب", "استراحت", "کار"]
+                    for kw in activity_keywords:
+                        norm_kw = normalize_persian_text(kw)
+                        if (norm_kw in clean_item_title or norm_kw in norm_raw):
+                            for ex in existing_tasks_qs:
+                                norm_ex = normalize_persian_text(ex.title)
+                                if norm_kw in norm_ex:
+                                    matched_task = ex
+                                    break
+                            if matched_task:
+                                break
+
+            # If action is delete / cancel
+            if action in ("delete", "remove", "cancel"):
+                if matched_task:
+                    matched_task.delete()
+                    continue
+
+            # If action is complete / done
+            if action in ("complete", "done"):
+                if matched_task:
+                    matched_task.is_completed = True
+                    matched_task.save()
+                    result_tasks.append(matched_task)
+                    continue
+
+            # Should we update the matched task?
+            # Yes, if:
+            # - action is explicitly update or reschedule
+            # - user intent is rescheduling and we found a matched task
+            # - a pending task with matching title already exists on the target date (prevents duplicate tasks!)
+            should_update = (
+                action in ("update", "reschedule") or
+                (is_reschedule_intent and matched_task is not None) or
+                (matched_task is not None and not matched_task.is_completed and (
+                    normalize_persian_text(matched_task.title) == normalize_persian_text(title) or
+                    normalize_persian_text(matched_task.title) in normalize_persian_text(title) or
+                    normalize_persian_text(title) in normalize_persian_text(matched_task.title)
+                ))
+            )
+
+            if should_update and matched_task:
+                matched_task.scheduled_time = time_val
+                matched_task.date = task_date
+                if item.get("duration_minutes"):
+                    matched_task.duration_minutes = item.get("duration_minutes")
+                if title and title != "تسک روزانه" and title != "تسک":
+                    matched_task.title = title
+                if item.get("priority"):
+                    matched_task.priority = priority_val
+                if item.get("category"):
+                    matched_task.category = category_val
+                if item.get("icon"):
+                    matched_task.icon = icon_val
+                if item.get("notification_text"):
+                    matched_task.notification_text = item.get("notification_text")
+                matched_task.save()
+                result_tasks.append(matched_task)
+                continue
+
+            # Default: Create new task
             task_obj = Task.objects.create(
-                title=item.get("title", "تسک بدون عنوان"),
+                title=title or "تسک روزانه",
                 scheduled_time=time_val,
                 duration_minutes=item.get("duration_minutes", 30),
                 priority=priority_val,
@@ -124,9 +269,9 @@ class VoiceToPlanView(APIView):
                 date=task_date,
                 is_completed=False,
             )
-            created_tasks.append(task_obj)
+            result_tasks.append(task_obj)
 
-        serialized_tasks = TaskSerializer(created_tasks, many=True).data
+        serialized_tasks = TaskSerializer(result_tasks, many=True).data
 
         return Response(
             {
@@ -137,6 +282,66 @@ class VoiceToPlanView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class TextToSpeechView(APIView):
+    """
+    GET /api/tts/?text=... or POST /api/tts/
+    Generates natural human-like Persian speech MP3 audio using Microsoft Edge Neural TTS (fa-IR-DilaraNeural).
+    Falls back to OpenAI/AvalAI tts-1 if Edge-TTS is unavailable.
+    """
+    def get(self, request, *args, **kwargs):
+        text = request.query_params.get("text", "")
+        return self._speak(text)
+
+    def post(self, request, *args, **kwargs):
+        text = request.data.get("text", "")
+        return self._speak(text)
+
+    def _speak(self, text: str):
+        if not text or not str(text).strip():
+            return Response({"error": "متن جهت تبدیل به صدا الزامی است."}, status=status.HTTP_400_BAD_REQUEST)
+
+        raw_text = str(text).strip()
+        # Clean text: remove emojis, markdown, and extra whitespace
+        clean_text = re.sub(r'[\U00010000-\U0010ffff]', '', raw_text)
+        clean_text = re.sub(r'[*#_`~]', '', clean_text).strip()
+
+        if not clean_text:
+            return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+
+        # 1. Primary Engine: Microsoft Edge Neural Persian TTS (fa-IR-DilaraNeural - authentic native Iranian Persian)
+        try:
+            import edge_tts
+
+            async def generate_edge_tts():
+                communicate = edge_tts.Communicate(clean_text[:600], "fa-IR-DilaraNeural")
+                chunks = [chunk['data'] async for chunk in communicate.stream() if chunk['type'] == 'audio']
+                return b''.join(chunks)
+
+            audio_bytes = asyncio.run(generate_edge_tts())
+            if audio_bytes and len(audio_bytes) > 0:
+                return HttpResponse(audio_bytes, content_type="audio/mpeg")
+        except Exception as edge_err:
+            logger.warning(f"Edge-TTS generation failed: {edge_err}. Attempting OpenAI fallback...")
+
+        # 2. Secondary Engine: OpenAI / AvalAI TTS fallback
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        base_url = os.getenv("OPENAI_BASE_URL", "https://api.avalai.ir/v1")
+        if api_key and api_key != "your_key_here":
+            try:
+                client = openai.OpenAI(api_key=api_key, base_url=base_url)
+                response = client.audio.speech.create(
+                    model="tts-1",
+                    voice="nova",
+                    input=clean_text[:500]
+                )
+                audio_bytes = response.read() if hasattr(response, "read") else response.content
+                return HttpResponse(audio_bytes, content_type="audio/mpeg")
+            except Exception as e:
+                logger.error(f"Fallback OpenAI TTS error: {e}")
+
+        return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
 
 class TaskListCreateView(APIView):

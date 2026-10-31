@@ -2,13 +2,35 @@ import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
-import { ThemeService, THEME_PRESETS, ThemePreset } from '../../services/theme.service';
+import {
+  ThemeService,
+  SKIN_TONE_OPTIONS,
+  FACE_SHAPE_OPTIONS,
+  HAIR_STYLE_OPTIONS,
+  HAIR_COLOR_OPTIONS,
+  EYE_SHAPE_OPTIONS,
+  EYE_COLOR_OPTIONS,
+  EYEBROW_OPTIONS,
+  MOUTH_EXPRESSION_OPTIONS,
+  LIP_COLOR_OPTIONS,
+  OUTFIT_STYLE_OPTIONS,
+  OUTFIT_COLOR_OPTIONS,
+  ACCESSORY_OPTIONS,
+  DEFAULT_AVATAR_CUSTOMIZATION,
+  sanitizeAvatarConfig,
+  THEME_PRESETS,
+  ThemePreset,
+} from '../../services/theme.service';
 import {
   UserProfile,
   ProfileSetupPayload,
   AvatarCustomization,
-  AvatarBaseType,
-  ThemeColor,
+  FaceShape,
+  HairStyle,
+  EyeShape,
+  EyebrowStyle,
+  MouthExpression,
+  OutfitStyle,
   AvatarAccessory,
 } from '../../models/task.model';
 import { AvatarCardComponent } from '../avatar-card/avatar-card.component';
@@ -62,79 +84,81 @@ export interface LifestyleQuestionOption {
           </div>
         </header>
 
-        <!-- STEP 1: Name & Schedule -->
+        <!-- Error Message Banner -->
+        @if (errorMessage()) {
+          <div class="mb-4 p-3 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-200 text-xs flex items-center gap-2 animate-bounce">
+            <span>⚠️</span>
+            <span>{{ errorMessage() }}</span>
+          </div>
+        }
+
+        <!-- STEP 1: Basic Identity & Circadian Clock -->
         @if (currentStep() === 1) {
-          <div class="space-y-5 animate-fade-in">
-            <!-- Name Field -->
+          <div class="space-y-4 animate-fade-in">
+            <!-- Name Input -->
             <div>
-              <label for="userNameInput" class="block text-xs font-bold text-slate-300 mb-2">
-                نام یا لقب شما چیه؟ <span class="text-purple-400">*</span>
+              <label for="userName" class="block text-xs font-bold text-slate-200 mb-1.5">
+                نام یا لقبی که دوست دارید تَسکی شما رو صدا بزنه:
               </label>
-              <div class="relative">
-                <input
-                  id="userNameInput"
-                  type="text"
-                  [(ngModel)]="name"
-                  placeholder="مثلاً: سارا، علی، کاپیتان"
-                  maxlength="40"
-                  class="w-full px-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-slate-100 text-sm placeholder:text-slate-500 outline-none transition"
-                />
-                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">👤</span>
-              </div>
-              <p class="text-[11px] text-slate-400 mt-1.5">تَسکی شما رو با این نام صدا می‌زنه.</p>
+              <input
+                id="userName"
+                type="text"
+                [(ngModel)]="name"
+                placeholder="مثلاً: سارا، علی، رفیق..."
+                class="w-full px-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition"
+                autocomplete="name"
+              />
             </div>
 
-            <!-- Wake & Sleep Times -->
-            <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-4">
-              <span class="block text-xs font-bold text-purple-300">
-                ⏰ ساعت خواب و بیداری روزمره:
-              </span>
+            <!-- Circadian Rhythm (Wake & Sleep Time) -->
+            <div class="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-3">
+              <div class="flex items-center gap-2 text-xs font-bold text-purple-300">
+                <span>⏰</span>
+                <span>ساعت زیستی و روتین شبانه‌روز:</span>
+              </div>
 
               <div class="grid grid-cols-2 gap-3">
-                <!-- Wake Time -->
                 <div>
-                  <label for="wakeTimeInput" class="block text-[11px] font-semibold text-slate-400 mb-1.5">
-                    🌅 بیداری صبح:
+                  <label for="wakeTime" class="block text-[11px] font-semibold text-slate-400 mb-1">
+                    🌅 معمولاً چه ساعتی بیدار می‌شید؟
                   </label>
                   <input
-                    id="wakeTimeInput"
+                    id="wakeTime"
                     type="time"
                     [(ngModel)]="wakeTime"
-                    class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-sm text-center font-bold focus:border-purple-500 outline-none transition"
+                    class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm text-center font-bold focus:border-purple-500 outline-none transition"
                   />
                 </div>
 
-                <!-- Sleep Time -->
                 <div>
-                  <label for="sleepTimeInput" class="block text-[11px] font-semibold text-slate-400 mb-1.5">
-                    🌙 خواب شب:
+                  <label for="sleepTime" class="block text-[11px] font-semibold text-slate-400 mb-1">
+                    🌙 چه ساعتی می‌خوابید؟
                   </label>
                   <input
-                    id="sleepTimeInput"
+                    id="sleepTime"
                     type="time"
                     [(ngModel)]="sleepTime"
-                    class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-sm text-center font-bold focus:border-purple-500 outline-none transition"
+                    class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm text-center font-bold focus:border-purple-500 outline-none transition"
                   />
                 </div>
               </div>
 
-              <div class="text-[11px] text-slate-400 leading-relaxed bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex items-start gap-2">
-                <span class="text-purple-400 mt-0.5">💡</span>
-                <span>هوش مصنوعی یادآورها و تسک‌های روز شما را فقط در بازه بیداری برنامه‌ریزی می‌کند تا استراحت شما مختل نشود.</span>
-              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/60">
+                🔒 <strong class="text-slate-300">تعهد تَسکی:</strong> هیچ تسک و برنامه‌ای در ساعات خواب شما زمان‌بندی نخواهد شد تا کیفیت استراحت شما حفظ شود.
+              </p>
             </div>
           </div>
         }
 
-        <!-- STEP 2: Lifestyle Questionnaire -->
+        <!-- STEP 2: Lifestyle & Goals Assessment -->
         @if (currentStep() === 2) {
-          <div class="space-y-5 animate-fade-in max-h-[60vh] overflow-y-auto px-1 py-1">
+          <div class="space-y-4 animate-fade-in max-h-[60vh] overflow-y-auto px-1">
             <!-- Question 1: Main Goal -->
             <div>
               <span class="block text-xs font-bold text-slate-200 mb-2">
-                ۱. هدف اصلی شما در این روزها چیه؟
+                ۱. هدف اصلی شما از برنامه‌ریزی روزانه چیه؟
               </span>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div class="grid grid-cols-1 gap-2">
                 @for (opt of goalOptions; track opt.id) {
                   <button
                     type="button"
@@ -201,14 +225,24 @@ export interface LifestyleQuestionOption {
           </div>
         }
 
-        <!-- STEP 3: Layered Avatar Studio -->
+        <!-- STEP 3: Instagram-Style Avatar Customization -->
         @if (currentStep() === 3) {
           <div class="space-y-4 animate-fade-in max-h-[60vh] overflow-y-auto px-1">
             <!-- Live Preview -->
             <div class="p-3 rounded-2xl bg-slate-950/70 border border-slate-800/80">
-              <span class="text-[11px] font-semibold text-purple-300 mb-1.5 block">
-                پیش‌نمایش دستیار هوشمند شما:
-              </span>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[11px] font-semibold text-purple-300">
+                  پیش‌نمایش دستیار هوشمند شما (سبک اینستاگرام):
+                </span>
+                <button
+                  type="button"
+                  (click)="randomizeAvatar()"
+                  class="text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-purple-600/30 text-purple-200 hover:bg-purple-600 hover:text-white transition cursor-pointer"
+                >
+                  🎲 تصادفی
+                </button>
+              </div>
+
               <app-avatar-card
                 [customization]="avatarConfig"
                 state="happy"
@@ -216,66 +250,57 @@ export interface LifestyleQuestionOption {
               ></app-avatar-card>
             </div>
 
-            <!-- Character Base -->
+            <!-- Skin Tone -->
             <div>
-              <span class="block text-xs font-bold text-slate-300 mb-2">۱. انتخاب کاراکتر:</span>
-              <div class="grid grid-cols-4 gap-2">
-                @for (base of baseTypes; track base.id) {
+              <span class="block text-xs font-bold text-slate-300 mb-1.5">۱. رنگ پوست:</span>
+              <div class="grid grid-cols-6 gap-1.5">
+                @for (skin of skinTones; track skin.id) {
                   <button
                     type="button"
-                    (click)="avatarConfig.baseType = base.id; applyThemePreview()"
-                    class="p-2 rounded-2xl border text-center transition cursor-pointer interactive-spring flex flex-col items-center"
-                    [ngClass]="avatarConfig.baseType === base.id
-                      ? 'bg-purple-600/25 border-purple-500 text-white shadow-md shadow-purple-900/30'
-                      : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'"
+                    (click)="avatarConfig.skinTone = skin.id"
+                    class="p-1 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer"
+                    [ngClass]="avatarConfig.skinTone === skin.id ? 'border-purple-400 bg-purple-950/40 ring-1 ring-purple-400' : 'border-slate-800 bg-slate-950/60'"
                   >
-                    <span class="text-2xl mb-1">{{ base.icon }}</span>
-                    <span class="text-[11px] font-medium">{{ base.label }}</span>
-                  </button>
-                }
-              </div>
-            </div>
-
-            <!-- Color Preset -->
-            <div>
-              <span class="block text-xs font-bold text-slate-300 mb-2">۲. رنگ تم و اتمسفر:</span>
-              <div class="grid grid-cols-5 gap-2">
-                @for (preset of presets; track preset.id) {
-                  <button
-                    type="button"
-                    (click)="avatarConfig.themeColor = preset.id; applyThemePreview()"
-                    class="p-2 rounded-2xl border text-center transition cursor-pointer interactive-spring flex flex-col items-center"
-                    [ngClass]="avatarConfig.themeColor === preset.id
-                      ? 'border-white bg-slate-800 shadow-md ring-2 ring-purple-400/40'
-                      : 'border-slate-800 bg-slate-950/70 hover:bg-slate-800'"
-                  >
-                    <span 
-                      class="w-6 h-6 rounded-full mb-1 flex items-center justify-center text-xs text-white shadow-inner"
-                      [style.background]="'linear-gradient(135deg, ' + preset.primaryHex + ', ' + preset.secondaryHex + ')'"
-                    >
-                      @if (avatarConfig.themeColor === preset.id) { ✓ }
+                    <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-slate-900 font-bold shadow" [style.background-color]="skin.hex">
+                      @if (avatarConfig.skinTone === skin.id) { ✓ }
                     </span>
-                    <span class="text-[10px] font-medium text-slate-300 truncate w-full text-center">{{ preset.name }}</span>
+                    <span class="text-[8px] text-slate-300 truncate w-full text-center">{{ skin.name }}</span>
                   </button>
                 }
               </div>
             </div>
 
-            <!-- Accessories -->
+            <!-- Hair Style -->
             <div>
-              <span class="block text-xs font-bold text-slate-300 mb-2">۳. اکسسوری بامزه:</span>
-              <div class="grid grid-cols-5 gap-1.5">
-                @for (acc of accessories; track acc.id) {
+              <span class="block text-xs font-bold text-slate-300 mb-1.5">۲. مدل مو:</span>
+              <div class="grid grid-cols-3 gap-1.5">
+                @for (h of hairStyles.slice(0, 6); track h.id) {
                   <button
                     type="button"
-                    (click)="avatarConfig.accessory = acc.id"
-                    class="p-2 rounded-2xl border text-center transition cursor-pointer interactive-spring flex flex-col items-center"
-                    [ngClass]="avatarConfig.accessory === acc.id
-                      ? 'bg-purple-600/25 border-purple-500 text-white shadow-md shadow-purple-900/30'
-                      : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'"
+                    (click)="avatarConfig.hairStyle = h.id"
+                    class="p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center"
+                    [ngClass]="avatarConfig.hairStyle === h.id ? 'bg-purple-600/25 border-purple-500 text-white' : 'bg-slate-950/70 border-slate-800 text-slate-400'"
                   >
-                    <span class="text-xl mb-1">{{ acc.icon }}</span>
-                    <span class="text-[10px] font-medium truncate w-full text-center">{{ acc.label }}</span>
+                    <span class="text-lg mb-0.5">{{ h.icon }}</span>
+                    <span class="text-[10px] font-bold truncate w-full">{{ h.label }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Outfit Style -->
+            <div>
+              <span class="block text-xs font-bold text-slate-300 mb-1.5">۳. استایل لباس:</span>
+              <div class="grid grid-cols-3 gap-1.5">
+                @for (outfit of outfitStyles.slice(0, 3); track outfit.id) {
+                  <button
+                    type="button"
+                    (click)="avatarConfig.outfitStyle = outfit.id"
+                    class="p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center"
+                    [ngClass]="avatarConfig.outfitStyle === outfit.id ? 'bg-purple-600/25 border-purple-500 text-white' : 'bg-slate-950/70 border-slate-800 text-slate-400'"
+                  >
+                    <span class="text-xl mb-0.5">{{ outfit.icon }}</span>
+                    <span class="text-[10px] font-bold truncate w-full">{{ outfit.label }}</span>
                   </button>
                 }
               </div>
@@ -319,44 +344,23 @@ export interface LifestyleQuestionOption {
             </button>
           }
         </div>
-
-        @if (errorMessage()) {
-          <div class="mt-3 p-2.5 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-200 text-xs text-center">
-            {{ errorMessage() }}
-          </div>
-        }
       </div>
 
-      <!-- Cool Dynamic Loading Overlay: "Generating your custom AI brain 🧠✨" -->
+      <!-- Loading Overlay when generating AI Guidelines -->
       @if (isSubmitting()) {
-        <div class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-fade-in" dir="rtl">
-          <!-- Animated Brain Visual -->
-          <div class="relative w-32 h-32 mb-6 flex items-center justify-center">
-            <!-- Pulsing Rings -->
-            <div class="absolute inset-0 rounded-full border-2 border-purple-500/30 animate-ping" style="animation-duration: 2.5s;"></div>
-            <div class="absolute inset-2 rounded-full border border-indigo-500/40 animate-pulse"></div>
-            <div class="absolute inset-4 rounded-full bg-gradient-to-tr from-purple-600/30 to-pink-600/30 blur-md"></div>
-            
-            <!-- Neon Brain Icon -->
-            <div class="relative text-5xl animate-bounce" style="animation-duration: 1.8s;">
+        <div class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+          <div class="relative w-20 h-20 mb-4">
+            <div class="absolute inset-0 rounded-full border-4 border-purple-500/20 border-t-purple-500 animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center text-3xl animate-bounce">
               🧠
-            </div>
-
-            <!-- Orbiting Sparkles -->
-            <div class="absolute -top-1 -right-1 text-xl animate-spin" style="animation-duration: 6s;">
-              ✨
-            </div>
-            <div class="absolute -bottom-1 -left-1 text-lg animate-spin" style="animation-duration: 4s; animation-direction: reverse;">
-              ⚡
             </div>
           </div>
 
-          <!-- Dynamic Text -->
-          <h3 class="text-lg font-black bg-gradient-to-r from-purple-200 via-indigo-200 to-pink-200 bg-clip-text text-transparent mb-2">
-            در حال تحلیل سبک زندگی و ساخت مغز هوش مصنوعی اختصاصی شما... 🧠✨
+          <h3 class="text-base font-bold text-white mb-1">
+            در حال ساخت مغز و قوانین هوش مصنوعی...
           </h3>
-          <p class="text-xs text-slate-300 max-w-sm leading-relaxed mb-4">
-            تَسکی در حال یادگیری بازه خواب و بیداری ({{ wakeTime }} تا {{ sleepTime }})، اهداف، لحن صمیمی و تدوین قوانین زمان‌بندی اختصاصی برای {{ name }} عزیز است.
+          <p class="text-xs text-slate-400 max-w-xs leading-relaxed mb-4">
+            هوش مصنوعی بر اساس سبک زندگی، ساعات خواب و اهداف شما در حال تنظیم لحن و برنامه اختصاصی است.
           </p>
 
           <!-- Loading Progress Pill -->
@@ -389,29 +393,15 @@ export class WizardComponent {
   selectedStress: string = 'balanced';
   selectedTone: string = 'friendly';
 
-  // Step 3 State
-  avatarConfig: AvatarCustomization = {
-    baseType: 'robot',
-    themeColor: 'purple',
-    accessory: 'none',
-  };
+  // Step 3 State: Full Instagram Avatar Customization
+  avatarConfig: AvatarCustomization = { ...DEFAULT_AVATAR_CUSTOMIZATION };
 
-  readonly presets: ThemePreset[] = THEME_PRESETS;
-
-  readonly baseTypes: { id: AvatarBaseType; label: string; icon: string }[] = [
-    { id: 'robot', label: 'ربات', icon: '🤖' },
-    { id: 'kitty', label: 'پیشی', icon: '🐱' },
-    { id: 'bear', label: 'خرسی', icon: '🐻' },
-    { id: 'alien', label: 'فضایی', icon: '👾' },
-  ];
-
-  readonly accessories: { id: AvatarAccessory; label: string; icon: string }[] = [
-    { id: 'none', label: 'ساده', icon: '✨' },
-    { id: 'glasses', label: 'عینک', icon: '👓' },
-    { id: 'party_hat', label: 'کلاه جشن', icon: '🥳' },
-    { id: 'headset', label: 'هدفون', icon: '🎧' },
-    { id: 'wizard_star', label: 'ستاره', icon: '⭐' },
-  ];
+  readonly skinTones = SKIN_TONE_OPTIONS;
+  readonly faceShapes = FACE_SHAPE_OPTIONS;
+  readonly hairStyles = HAIR_STYLE_OPTIONS;
+  readonly hairColors = HAIR_COLOR_OPTIONS;
+  readonly eyeShapes = EYE_SHAPE_OPTIONS;
+  readonly outfitStyles = OUTFIT_STYLE_OPTIONS;
 
   readonly goalOptions: LifestyleQuestionOption[] = [
     {
@@ -421,142 +411,119 @@ export class WizardComponent {
       icon: '🚀',
     },
     {
-      id: 'work_life_balance',
-      label: 'تعادل کار و زندگی',
-      description: 'کاهش فرسودگی، استراحت کافی و آرامش',
+      id: 'balance',
+      label: 'تعادل کار و زندگی (Work-Life Balance)',
+      description: 'پیشگیری از فرسودگی شغلی و ایجاد زمان استراحت',
       icon: '⚖️',
     },
     {
-      id: 'health_fitness',
-      label: 'سلامتی، ورزش و تحرک',
-      description: 'استمرار تمرین، آب نوشیدن و نظم روزانه',
-      icon: '🏃',
-    },
-    {
-      id: 'learning_study',
-      label: 'یادگیری و مطالعه منظم',
-      description: 'کتاب‌خوانی و تقویت مهارت‌های جدید',
-      icon: '📚',
+      id: 'mindfulness',
+      label: 'کاهش استرس و آرامش ذهن',
+      description: 'تمرکز بر خودمراقبتی، ورزش ملایم و حال خوب',
+      icon: '🧘',
     },
   ];
 
   readonly stressOptions: LifestyleQuestionOption[] = [
-    { id: 'light', label: 'آرام و سبک', description: '', icon: '🍃' },
-    { id: 'balanced', label: 'متوسط و منظم', description: '', icon: '⚡' },
-    { id: 'high_intensity', label: 'فشرده و پرفشار', description: '', icon: '🔥' },
+    { id: 'relaxed', label: 'آرام و سبک', description: '', icon: '🍃' },
+    { id: 'balanced', label: 'متعادل و نرمال', description: '', icon: '⚡' },
+    { id: 'high', label: 'فشرده و پرفشار', description: '', icon: '🔥' },
   ];
 
   readonly toneOptions: LifestyleQuestionOption[] = [
     {
       id: 'friendly',
-      label: 'دوست صمیمی',
-      description: 'پرانرژی، مهربان و مشوق',
-      icon: '🥰',
+      label: 'دوست صمیمی و پرانرژی',
+      description: 'گفتار خودمانی، انگیزاننده و بمب انرژی',
+      icon: '🎉',
     },
     {
-      id: 'strict_coach',
-      label: 'مربی جدی',
-      description: 'دقیق، منظم و نتیجه‌گرا',
+      id: 'coach',
+      label: 'مربی قاطع و باانگیزه',
+      description: 'تمرکز جدی بر ددلاین‌ها و تعهد بدون بهانه',
       icon: '🎯',
     },
     {
-      id: 'calm_guide',
-      label: 'راهنمای آرامش‌بخش',
-      description: 'صبور، بدون استرس و ملایم',
-      icon: '🧘',
+      id: 'calm',
+      label: 'راهنمای آرامش‌بخش و همدل',
+      description: 'لحن شمرده، گوش شنوا و کاهش‌دهنده اضطراب',
+      icon: '🌱',
     },
   ];
 
   getStepTitle(): string {
     switch (this.currentStep()) {
-      case 1:
-        return 'به تَسکی خوش اومدی! 👋';
-      case 2:
-        return 'پرسشنامه سبک زندگی 📝';
-      case 3:
-        return 'طراحی آواتار و استایل شخصی 🎨';
-      default:
-        return 'راه‌اندازی اختصاصی';
+      case 1: return 'شناخت اولیه و روتین خواب';
+      case 2: return 'ارزیابی سبک زندگی و اهداف';
+      case 3: return 'طراحی آواتار و چهره شما';
+      default: return 'راه‌اندازی اختصاصی';
     }
   }
 
   getStepSubtitle(): string {
     switch (this.currentStep()) {
-      case 1:
-        return 'ابتدا نام و ساعات روتین بیداری و خوابت رو وارد کن تا برنامه متناسب با زمانت چیده بشه.';
-      case 2:
-        return 'با پاسخ به این ۳ پرسش کوتاه، هوش مصنوعی دقیقاً رفتار و لحن دستیارت رو مطابق روحیه تو تنظیم می‌کنه.';
-      case 3:
-        return 'کاراکتر، رنگ تم و اکسسوری دلخواه همراهت رو انتخاب کن!';
-      default:
-        return '';
+      case 1: return 'نام و ساعات بیداری و خواب خود را مشخص کنید تا برنامه روزانه‌تان هوشمندانه تنظیم شود.';
+      case 2: return 'با چند پرسش کوتاه، هوش مصنوعی لحن و برنامه اختصاصی شما را کشف می‌کند.';
+      case 3: return 'چهره، مو، پوست و استایل آواتار اختصاصی خودت رو مثل اینستاگرام بساز!';
+      default: return '';
     }
   }
 
+  randomizeAvatar(): void {
+    this.avatarConfig = this.themeService.getRandomAvatar();
+  }
+
   nextStep(): void {
-    if (this.currentStep() === 1 && !this.name.trim()) {
-      this.errorMessage.set('لطفاً نام خود را وارد کنید.');
+    if (this.currentStep() === 1) {
+      if (!this.name.trim()) {
+        this.errorMessage.set('لطفاً نام یا لقبتون رو وارد کنید.');
+        return;
+      }
+      this.errorMessage.set(null);
+      this.currentStep.set(2);
       return;
     }
-    this.errorMessage.set(null);
-    if (this.currentStep() < 3) {
-      this.currentStep.update((s) => s + 1);
+
+    if (this.currentStep() === 2) {
+      this.currentStep.set(3);
+      return;
     }
   }
 
   previousStep(): void {
-    this.errorMessage.set(null);
     if (this.currentStep() > 1) {
-      this.currentStep.update((s) => s - 1);
+      this.currentStep.update(s => s - 1);
     }
-  }
-
-  applyThemePreview(): void {
-    this.themeService.updateCustomization(this.avatarConfig);
   }
 
   submitWizard(): void {
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 
-    const goalLabel = this.goalOptions.find((g) => g.id === this.selectedGoal)?.label || 'بهره‌وری';
-    const stressLabel = this.stressOptions.find((s) => s.id === this.selectedStress)?.label || 'متعادل';
-    const toneLabel = this.toneOptions.find((t) => t.id === this.selectedTone)?.label || 'دوست صمیمی و پرانرژی';
-
     const payload: ProfileSetupPayload = {
-      name: this.name.trim() || 'دوست من',
-      wake_time: this.wakeTime || '07:00',
-      sleep_time: this.sleepTime || '23:00',
+      name: this.name.trim() || 'کاربر',
+      wake_time: this.wakeTime,
+      sleep_time: this.sleepTime,
       avatar_config: this.avatarConfig,
       lifestyle_answers: {
-        mainGoal: goalLabel,
-        stressLevel: stressLabel,
-        aiTone: toneLabel,
+        mainGoal: this.selectedGoal,
+        stressLevel: this.selectedStress,
+        aiTone: this.selectedTone,
       },
     };
 
+    // Save avatar configuration to ThemeService
+    this.themeService.saveCustomization(this.avatarConfig);
+
     this.apiService.setupProfile(payload).subscribe({
       next: (profile) => {
-        // Save to localStorage
-        try {
-          localStorage.setItem('tasky_user_profile', JSON.stringify(profile));
-        } catch (e) {
-          console.warn('Could not cache profile in localStorage:', e);
-        }
-
-        // Apply theme to ThemeService
-        this.themeService.updateCustomization(profile.avatar_config);
-
-        // Keep the cool brain screen visible for a brief moment for aesthetic satisfaction
-        setTimeout(() => {
-          this.isSubmitting.set(false);
-          this.completed.emit(profile);
-        }, 1200);
+        this.isSubmitting.set(false);
+        this.completed.emit(profile);
       },
       error: (err) => {
-        console.error('Wizard setup failed:', err);
+        console.error('Profile setup error:', err);
         this.isSubmitting.set(false);
-        this.errorMessage.set('خطا در برقراری ارتباط با سرور برای تولید مغز هوش مصنوعی.');
+        this.errorMessage.set('خطا در ذخیره پروفایل. لطفاً مجدداً تلاش کنید.');
       },
     });
   }

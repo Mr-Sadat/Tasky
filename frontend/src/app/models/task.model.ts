@@ -40,14 +40,57 @@ export interface JalaliDateTab {
   isToday?: boolean;
 }
 
-export type AvatarBaseType = 'robot' | 'kitty' | 'bear' | 'alien';
+export type AvatarBaseType = 'human' | 'robot' | 'kitty' | 'bear' | 'alien';
 export type ThemeColor = 'purple' | 'mint' | 'blue' | 'peach' | 'pink';
-export type AvatarAccessory = 'none' | 'glasses' | 'party_hat' | 'headset' | 'wizard_star';
+
+export type FaceShape = 'round' | 'oval' | 'square' | 'heart';
+export type HairStyle =
+  | 'long_straight'
+  | 'short_casual'
+  | 'medium_wavy'
+  | 'curly_bob'
+  | 'bangs_lob'
+  | 'top_bun'
+  | 'ponytail'
+  | 'buzz_fade'
+  | 'braids';
+export type EyeShape = 'almond' | 'round_doe' | 'cat_eye' | 'smiling';
+export type EyebrowStyle = 'natural_full' | 'arched' | 'straight' | 'thin';
+export type MouthExpression = 'gentle_smile' | 'happy_teeth' | 'cool_smirk' | 'neutral' | 'excited';
+export type OutfitStyle = 'hoodie' | 'tshirt' | 'blazer' | 'turtleneck' | 'athletic';
+
+export type AvatarAccessory =
+  | 'none'
+  | 'glasses_round'
+  | 'glasses_cat'
+  | 'headphones'
+  | 'earrings'
+  | 'beanie'
+  | 'baseball_cap'
+  // Legacy aliases
+  | 'glasses'
+  | 'party_hat'
+  | 'headset'
+  | 'wizard_star';
 
 export interface AvatarCustomization {
-  baseType: AvatarBaseType;
-  themeColor: ThemeColor;
+  // Modular Instagram Avatar features
+  faceShape: FaceShape;
+  skinTone: string;
+  hairStyle: HairStyle;
+  hairColor: string;
+  eyeShape: EyeShape;
+  eyeColor: string;
+  eyebrows: EyebrowStyle;
+  mouthExpression: MouthExpression;
+  lipColor: string;
+  outfitStyle: OutfitStyle;
+  outfitColor: string;
   accessory: AvatarAccessory;
+
+  // Theme & legacy compatibility
+  baseType?: AvatarBaseType;
+  themeColor?: ThemeColor;
 }
 
 export interface UserProfile {

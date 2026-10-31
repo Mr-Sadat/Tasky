@@ -5,6 +5,7 @@ from .views import (
     TaskDetailView,
     UserProfileView,
     ProfileSetupView,
+    TextToSpeechView,
 )
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path("tasks/<int:pk>/", TaskDetailView.as_view(), name="task_detail"),
     path("profile/", UserProfileView.as_view(), name="user_profile"),
     path("profile/setup/", ProfileSetupView.as_view(), name="profile_setup"),
+    path("tts/", TextToSpeechView.as_view(), name="text_to_speech"),
 ]

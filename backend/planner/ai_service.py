@@ -49,6 +49,14 @@ class MoodEnum(str, Enum):
     EXCITED = "excited"
 
 
+class TaskActionEnum(str, Enum):
+    CREATE = "create"
+    RESCHEDULE = "reschedule"
+    UPDATE = "update"
+    DELETE = "delete"
+    COMPLETE = "complete"
+
+
 def parse_and_convert_to_gregorian(
     date_str: Optional[str] = None,
     jalali_str: Optional[str] = None,
@@ -135,25 +143,54 @@ def get_jalali_info(g_date: Optional[datetime.date] = None) -> dict:
 
 
 def normalize_time_str(val: any, default_time: str = "12:00") -> str:
-    """Normalizes any loose time representation into standard 24-hour HH:MM format."""
+    """Normalizes any loose time representation (digits or Persian words) into standard 24-hour HH:MM format."""
     if not val:
         return default_time
     val_str = str(val).strip()
     if not val_str:
         return default_time
 
+    # Normalize Persian & Arabic digits
+    persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+    arabic_digits = "٠١٢٣٤٥٦٧٨٩"
+    for i, (p, a) in enumerate(zip(persian_digits, arabic_digits)):
+        val_str = val_str.replace(p, str(i)).replace(a, str(i))
+
+    is_night = any(w in val_str for w in ["شب", "عصر", "بعدازظهر", "غروب"])
+    is_half = any(w in val_str for w in ["نیم", "هنویم", "هنویمه"])
+
     # Match patterns like HH:MM or H:MM
     m = re.search(r'(\d{1,2})[:](\d{1,2})', val_str)
     if m:
         h, mn = int(m.group(1)), int(m.group(2))
+        if is_night and 1 <= h <= 11:
+            h += 12
         return f"{max(0, min(23, h)):02d}:{max(0, min(59, mn)):02d}"
 
     # Match single or two digit numbers e.g. "10" or "9"
     m_single = re.search(r'\b(\d{1,2})\b', val_str)
     if m_single:
         h = int(m_single.group(1))
-        if 0 <= h <= 23:
-            return f"{h:02d}:00"
+        if is_night and 1 <= h <= 11:
+            h += 12
+        mn = 30 if is_half else 0
+        return f"{max(0, min(23, h)):02d}:{mn:02d}"
+
+    # Persian number words mapping
+    word_to_num = {
+        "یک": 1, "دو": 2, "سه": 3, "چهار": 4, "پنج": 5, "شش": 6,
+        "هفت": 7, "هشت": 8, "نه": 9, "ده": 10, "یازده": 11, "دوازده": 12,
+        "سیزده": 13, "چهارده": 14, "پانزده": 15, "شانزده": 16, "هفده": 17,
+        "هجده": 18, "نوزده": 19, "بیست": 20, "بیست و یک": 21, "بیست و دو": 22,
+        "بیست و سه": 23
+    }
+    for word, num in sorted(word_to_num.items(), key=lambda x: -len(x[0])):
+        if word in val_str:
+            h = num
+            if is_night and 1 <= h <= 11:
+                h += 12
+            mn = 30 if is_half else 0
+            return f"{max(0, min(23, h)):02d}:{mn:02d}"
 
     return default_time
 
@@ -283,6 +320,14 @@ class TaskPlanItem(BaseModel):
         default="یادآور تسک",
         description="یک متن نوتیفیکیشن دوستانه و انگیزاننده به فارسی برای یادآوری"
     )
+    action: TaskActionEnum = Field(
+        default=TaskActionEnum.CREATE,
+        description="نوع عملیات: create (ایجاد تسک جدید)، reschedule (جابه‌جایی یا تغییر ساعت تسک موجود)، update (تغییر جزئیات)، delete (حذف/لغو تسک)، complete (انجام شدن)"
+    )
+    existing_task_id: Optional[int] = Field(
+        default=None,
+        description="شناسه عددی (ID) تسک موجود در صورت جابه‌جایی، تغییر یا حذف"
+    )
 
     @field_validator("title", mode="before")
     @classmethod
@@ -345,6 +390,33 @@ class TaskPlanItem(BaseModel):
         if info and hasattr(info, "data") and isinstance(info.data, dict):
             title = info.data.get("title") or "تسک"
         return f"وقت انجام {title} رسیده!"
+
+    @field_validator("action", mode="before")
+    @classmethod
+    def validate_action(cls, v):
+        if isinstance(v, TaskActionEnum):
+            return v
+        if isinstance(v, str):
+            s = v.strip().lower()
+            if s in ("reschedule", "move", "shift", "change_time", "delay"):
+                return TaskActionEnum.RESCHEDULE
+            if s in ("update", "edit", "modify"):
+                return TaskActionEnum.UPDATE
+            if s in ("delete", "remove", "cancel"):
+                return TaskActionEnum.DELETE
+            if s in ("complete", "done", "finish"):
+                return TaskActionEnum.COMPLETE
+        return TaskActionEnum.CREATE
+
+    @field_validator("existing_task_id", mode="before")
+    @classmethod
+    def validate_existing_id(cls, v):
+        try:
+            if v is not None and str(v).strip():
+                return int(v)
+        except (ValueError, TypeError):
+            pass
+        return None
 
 
 class LLMPlanResponse(BaseModel):
@@ -460,6 +532,24 @@ def soft_parse_llm_json(
         ic = sanitize_icon(item.get("icon")).value
         notif = str(item.get("notification_text") or f"وقت انجام {title} رسیده!").strip()
 
+        act_raw = str(item.get("action") or "create").lower()
+        if act_raw in ("reschedule", "move", "shift", "delay"):
+            act_val = "reschedule"
+        elif act_raw in ("update", "edit"):
+            act_val = "update"
+        elif act_raw in ("delete", "remove", "cancel"):
+            act_val = "delete"
+        elif act_raw in ("complete", "done"):
+            act_val = "complete"
+        else:
+            act_val = "create"
+
+        ex_id = item.get("existing_task_id")
+        try:
+            ex_id = int(ex_id) if ex_id is not None else None
+        except (ValueError, TypeError):
+            ex_id = None
+
         parsed_tasks.append({
             "title": title,
             "scheduled_time": time_val,
@@ -470,6 +560,8 @@ def soft_parse_llm_json(
             "category": cat,
             "icon": ic,
             "notification_text": notif,
+            "action": act_val,
+            "existing_task_id": ex_id,
         })
 
     # If no tasks could be parsed but user provided transcribed text, generate a fallback task
@@ -576,8 +668,8 @@ def generate_ai_guidelines(
         )
 
 
-def get_mock_plan(user_text: Optional[str] = None, profile=None) -> dict:
-    """Returns a realistic Persian plan conforming to the structured output contract and user profile."""
+def get_mock_plan(user_text: Optional[str] = None, profile=None, existing_tasks: Optional[list] = None) -> dict:
+    """Returns a realistic Persian plan conforming to the structured output contract, user profile, and existing tasks."""
     profile = profile or get_user_profile()
 
     user_name = profile.name if profile and profile.name else "رفیق"
@@ -599,6 +691,46 @@ def get_mock_plan(user_text: Optional[str] = None, profile=None) -> dict:
         if user_text and user_text.strip()
         else "امروز می‌خوام ساعت ۱۰ با تیم جلسه هماهنگی داشته باشم، بعدازظهر ساعت ۵ برم ورزش و شب هم نیم ساعت کتاب بخونم."
     )
+
+    # Check if user is asking to reschedule an existing task in mock mode
+    if existing_tasks and user_text:
+        t_lower = user_text.lower()
+        resched_words = ["بنداز", "جابه‌جا", "جابجا", "عقب", "جلو", "تغییر", "ساعت", "پشیمون", "نمیخوام", "بذار", "بگذار", "عوض", "موکول"]
+        if any(w in t_lower for w in resched_words):
+            for ex in existing_tasks:
+                ex_title_lower = ex.get("title", "").lower()
+                if (
+                    ex_title_lower in t_lower
+                    or "کدنویسی" in t_lower
+                    or "کودنویسی" in t_lower
+                    or "شام" in t_lower
+                    or "ورزش" in t_lower
+                ):
+                    new_time = normalize_time_str(user_text, "10:00")
+                    mock_resched = {
+                        "raw_transcribed_text": transcribed,
+                        "avatar_reaction": {
+                            "mood": "supportive",
+                            "voice_reply": f"چشم {user_name} جان! زمان تسک «{ex.get('title')}» رو برات تنظیم کردم روی ساعت {new_time} تا با آرامش کامل انجامش بدی. ✨"
+                        },
+                        "tasks": [
+                            {
+                                "action": "reschedule",
+                                "existing_task_id": ex.get("id"),
+                                "title": ex.get("title"),
+                                "scheduled_time": new_time,
+                                "scheduled_date": "",
+                                "jalali_display_date": "امروز",
+                                "duration_minutes": ex.get("duration_minutes", 30),
+                                "priority": "medium",
+                                "category": "work",
+                                "icon": "briefcase",
+                                "notification_text": f"یادآوری: تسک «{ex.get('title')}» سر ساعت {new_time}!",
+                            }
+                        ]
+                    }
+                    validated = PlanResponse(**mock_resched)
+                    return validated.model_dump()
 
     mock_data = {
         "raw_transcribed_text": transcribed,
@@ -651,12 +783,13 @@ def process_voice_to_tasks(
     audio_file=None,
     text_input: Optional[str] = None,
     current_time_str: str = "09:00",
-    profile=None
+    profile=None,
+    existing_tasks: Optional[list] = None
 ) -> dict:
     """
     Processes user voice audio or text note into structured daily tasks and avatar reaction.
     Supports USE_MOCK_AI flag as well as live OpenAI / AvalAI / Gemini endpoints.
-    Fully understands Persian Jalali calendar dates, schedule constraints, and personalized UserProfile.
+    Fully understands Persian Jalali calendar dates, schedule constraints, existing tasks, and smart rescheduling.
     """
     profile = profile or get_user_profile()
 
@@ -667,7 +800,7 @@ def process_voice_to_tasks(
 
     # If mock mode is forced or API key is not configured, return mock plan
     if use_mock or not api_key or api_key == "your_key_here":
-        return get_mock_plan(text_input, profile=profile)
+        return get_mock_plan(text_input, profile=profile, existing_tasks=existing_tasks)
 
     try:
         client = openai.OpenAI(
@@ -698,10 +831,10 @@ def process_voice_to_tasks(
                 transcribed_text = getattr(transcription, "text", str(transcription)).strip()
             except Exception as e:
                 logger.error(f"Error during audio transcription: {e}")
-                return get_mock_plan(f"خطا در پیاده‌سازی صدا: {e}")
+                return get_mock_plan(f"خطا در پیاده‌سازی صدا: {e}", existing_tasks=existing_tasks)
 
         if not transcribed_text:
-            return get_mock_plan("برنامه روزانه پیش‌فرض")
+            return get_mock_plan("برنامه روزانه پیش‌فرض", existing_tasks=existing_tasks)
 
         # Step 2: Calculate both current Gregorian date and Jalali date in local timezone
         now_gregorian = timezone.localdate()
@@ -728,28 +861,71 @@ def process_voice_to_tasks(
                 f"{profile.ai_guidelines}\n"
             )
 
-        # Step 4: System prompt reinforcing Jalali calendar, HH:MM format, and user profile constraints
+        # Step 4: Inject Existing Tasks Context
+        existing_tasks_context = ""
+        if existing_tasks:
+            lines = []
+            for t in existing_tasks:
+                tid = t.get("id")
+                t_title = t.get("title")
+                t_time = t.get("scheduled_time")
+                t_dur = t.get("duration_minutes", 30)
+                t_status = "تکمیل شده" if t.get("is_completed") else "انجام‌نشده"
+                lines.append(f"- شناسه {tid}: «{t_title}» (ساعت {t_time}، مدت {t_dur} دقیقه، وضعیت: {t_status})")
+
+            existing_tasks_context = (
+                "\nCURRENT EXISTING TASKS ALREADY IN USER'S SCHEDULE:\n"
+                + "\n".join(lines)
+                + "\nCRITICAL RULES FOR RESCHEDULING & TASK MODIFICATIONS:\n"
+                + "1. If the user mentions moving, delaying, shifting, changing the time, or changing their mind about an existing task:\n"
+                + "   Persian examples:\n"
+                + "   - 'تسک کدنویسی رو بنداز برای ساعت ۱۰'\n"
+                + "   - 'من پشیمون شدم ساعت ۱۰ میخوام شام بخورم'\n"
+                + "   - 'تسک شروع کدنویسی رو بذار برای ساعت ده و نیم شب'\n"
+                + "   - 'شام رو منتقل کن به ساعت ۲۲'\n"
+                + "   - 'الان نمیخوام ورزش کنم، بذار ساعت ۶ عصر'\n"
+                + "   - 'ورزش رو تغییر بده'\n"
+                + "   RULES:\n"
+                + "   - NEVER CREATE A DUPLICATE TASK!\n"
+                + "   - You MUST set 'action': 'reschedule' (or 'update')\n"
+                + "   - You MUST set 'existing_task_id': the numeric ID of the matching task from the list above.\n"
+                + "   - Set 'scheduled_time': the new requested 24-hour time (e.g. '22:00').\n"
+                + "   - In 'avatar_reaction.voice_reply', speak warmly in natural, fluent Persian stating that this existing task was rescheduled to the new time.\n"
+                + "2. If the user asks to cancel or delete an existing task (e.g. 'کدنویسی رو حذف کن', 'جلسه کنسل شد'):\n"
+                + "   - Set 'action': 'delete'\n"
+                + "   - Set 'existing_task_id': the matching task ID.\n"
+                + "3. If the user says an existing task is finished or completed (e.g. 'کدنویسی انجام شد'):\n"
+                + "   - Set 'action': 'complete'\n"
+                + "   - Set 'existing_task_id': the matching task ID.\n"
+                + "4. If an existing task on the schedule covers the same activity (e.g. dinner/شام, coding/کدنویسی, gym/ورزش), DO NOT create a new task with 'action': 'create' — ALWAYS treat it as a reschedule/update with 'action': 'reschedule' and specify 'existing_task_id'.\n"
+                + "5. Only set 'action': 'create' when the user is introducing an entirely NEW activity not already on the schedule.\n"
+            )
+
+        # Step 5: System prompt reinforcing Jalali calendar, HH:MM format, and user profile constraints
         system_prompt = (
             "You are Tasky, an adorable, enthusiastic, and highly organized Persian personal assistant avatar.\n"
-            "Analyze the user's Persian voice note or text message and extract their tasks and schedule.\n\n"
+            "Analyze the user's Persian voice note or text message and extract or update their tasks and schedule.\n\n"
             f"CALENDAR & TIME CONTEXT:\n"
             f"- Current Date: {current_context}\n"
             f"- Current Approximate Time: {current_time_str}\n"
             f"{user_profile_context}\n"
+            f"{existing_tasks_context}\n"
             "CRITICAL RULES FOR DATES & CALENDAR:\n"
             "1. The user may mention dates using Persian Jalali calendar (e.g. '۱۵ آبان', 'آخر این ماه', 'اول آذر', '۲۵ اسفند'), relative terms (e.g. 'امروز', 'فردا', 'پس‌فردا', 'سه شنبه', 'شنبه هفته بعد'), or specific days.\n"
-            "2. For each task, you MUST determine the target date:\n"
-            "   - 'scheduled_date': The target date in YYYY-MM-DD format. You can provide it in either Jalali format (e.g. '1405-08-15') or Gregorian format (e.g. '2026-11-06'). If the task is for today, use today's date.\n"
-            "   - 'jalali_display_date': A friendly Persian date label for the user (e.g. 'امروز', 'فردا', '۱۵ آبان', '۳ آذر').\n"
-            "3. Every single task in 'tasks' MUST have an explicit 'scheduled_time' in 24-hour HH:MM format (e.g. '09:00', '14:30', '20:00'). "
-            f"If the user didn't mention an exact time, estimate a reasonable time based on their local time ({current_time_str}) and active hours constraint. NEVER leave scheduled_time empty or null.\n"
+            "2. For each task, determine the target date ('scheduled_date' in YYYY-MM-DD format, 'jalali_display_date' friendly Persian label).\n"
+            "3. Every single task in 'tasks' MUST have an explicit 'scheduled_time' in 24-hour HH:MM format (e.g. '09:00', '14:30', '20:00'). NEVER leave scheduled_time empty or null.\n"
             "4. Return a JSON object with exactly two keys: 'avatar_reaction' and 'tasks'. Do NOT include 'raw_transcribed_text'.\n"
-            f"5. 'avatar_reaction' MUST be an object with 'mood' ('happy', 'serious', 'supportive', or 'excited') and 'voice_reply' (a warm, short, friendly Persian sentence mentioning the plan or target dates, addressing {user_address} respectfully in accordance with personalized guidelines).\n"
+            f"5. 'avatar_reaction' MUST be an object with 'mood' ('happy', 'serious', 'supportive', or 'excited') and 'voice_reply':\n"
+            f"   - A warm, friendly, short, and natural conversational Persian sentence addressed to {user_address}.\n"
+            "   - Tone must be authentic, fluent colloquial Iranian Persian (فارسی روان، صمیمی، دلنشین و محاوره‌ای مانند یک دوست صمیمی و پرانرژی؛ از لحن خشک کتابی، ماشینی، اداری یا جملات تکراری کاملاً پرهیز کن).\n"
+            "   - If tasks were rescheduled or moved, explicitly confirm that the task was moved/rescheduled to the new time.\n"
             "6. For each task in 'tasks', provide:\n"
+            "   - 'action': 'create', 'reschedule', 'update', 'delete', or 'complete'\n"
+            "   - 'existing_task_id': integer ID if modifying an existing task, else null\n"
             "   - 'title': concise Persian title\n"
             "   - 'scheduled_time': HH:MM (mandatory, 24-hour format)\n"
-            "   - 'scheduled_date': YYYY-MM-DD (e.g. '1405-08-15' or Gregorian equivalent)\n"
-            "   - 'jalali_display_date': friendly Persian date label (e.g. '۱۵ آبان', 'فردا', 'امروز')\n"
+            "   - 'scheduled_date': YYYY-MM-DD\n"
+            "   - 'jalali_display_date': friendly Persian date label\n"
             "   - 'duration_minutes': integer (default 30)\n"
             "   - 'priority': 'high', 'medium', or 'low'\n"
             "   - 'category': 'work', 'study', 'fitness', 'health', 'shopping', 'personal', or 'rest'\n"
