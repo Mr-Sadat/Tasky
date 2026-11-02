@@ -1,6 +1,8 @@
-import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, inject, signal } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnInit, OnDestroy, Output, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, switchMap } from 'rxjs/operators';
 import { ApiService } from '../../services/api.service';
 import {
   ThemeService,
@@ -197,11 +199,11 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
           </div>
         }
 
-        <!-- TAB 3: INSTAGRAM-STYLE AVATAR CREATOR -->
+        <!-- TAB 3: INSTAGRAM-STYLE AVATAR CREATOR (REAL-TIME REACTIVE) -->
         @if (activeTab() === 'avatar') {
           <div class="space-y-4 animate-fade-in">
             <!-- Live Preview Hero Card -->
-            <div class="p-3 rounded-2xl bg-gradient-to-r from-purple-950/60 via-slate-950 to-indigo-950/60 border border-purple-500/30 flex items-center gap-4">
+            <div class="p-3.5 rounded-2xl bg-gradient-to-r from-purple-950/60 via-slate-950 to-indigo-950/60 border border-purple-500/30 flex items-center gap-4">
               <div class="w-20 h-20 rounded-2xl bg-slate-950/80 border border-purple-500/40 flex items-center justify-center shrink-0 shadow-lg overflow-hidden">
                 <app-dynamic-avatar
                   [customization]="editAvatarConfig"
@@ -211,21 +213,28 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
               </div>
 
               <div class="flex-1 min-w-0">
-                <span class="text-xs font-bold text-white block mb-1">
+                <span class="text-xs font-bold text-white block mb-0.5">
                   چهره اختصاصی شما (سبک اینستاگرام)
                 </span>
                 <p class="text-[11px] text-purple-200/80 leading-snug mb-2">
                   اجزای صورت، مو، چشم و استایل لباس رو طبق سلیقه‌ت تغییر بده!
                 </p>
 
-                <button
-                  type="button"
-                  (click)="randomizeAvatar()"
-                  class="text-[11px] font-bold px-3 py-1 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/40 transition cursor-pointer flex items-center gap-1 interactive-spring"
-                >
-                  <span>🎲</span>
-                  <span>پیشنهاد تصادفی</span>
-                </button>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    (click)="randomizeAvatar()"
+                    class="text-[11px] font-bold px-3 py-1 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/40 transition cursor-pointer flex items-center gap-1 interactive-spring"
+                  >
+                    <span>🎲</span>
+                    <span>پیشنهاد تصادفی</span>
+                  </button>
+
+                  <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-medium select-none">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>ذخیره خودکار در لحظه</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -290,8 +299,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (skin of skinTones; track skin.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.skinTone = skin.id"
-                        class="p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer"
+                        (click)="updateAvatarProp({ skinTone: skin.id })"
+                        class="p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer interactive-spring"
                         [ngClass]="editAvatarConfig.skinTone === skin.id ? 'border-purple-400 bg-purple-950/40 ring-1 ring-purple-400' : 'border-slate-800 bg-slate-950/60'"
                       >
                         <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-slate-900 font-bold" [style.background-color]="skin.hex">
@@ -309,8 +318,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (shape of faceShapes; track shape.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.faceShape = shape.id"
-                        class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2"
+                        (click)="updateAvatarProp({ faceShape: shape.id })"
+                        class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2 interactive-spring"
                         [ngClass]="editAvatarConfig.faceShape === shape.id ? 'bg-purple-600/25 border-purple-500 text-white' : 'bg-slate-950/70 border-slate-800 text-slate-400'"
                       >
                         <span class="text-xl">{{ shape.icon }}</span>
@@ -334,8 +343,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (col of hairColors; track col.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.hairColor = col.id"
-                        class="p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer"
+                        (click)="updateAvatarProp({ hairColor: col.id })"
+                        class="p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer interactive-spring"
                         [ngClass]="editAvatarConfig.hairColor === col.id ? 'border-purple-400 bg-purple-950/40 ring-1 ring-purple-400' : 'border-slate-800 bg-slate-950/60'"
                       >
                         <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold" [style.background-color]="col.hex">
@@ -353,8 +362,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (h of hairStyles; track h.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.hairStyle = h.id"
-                        class="p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center"
+                        (click)="updateAvatarProp({ hairStyle: h.id })"
+                        class="p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center interactive-spring"
                         [ngClass]="editAvatarConfig.hairStyle === h.id ? 'bg-purple-600/25 border-purple-500 text-white' : 'bg-slate-950/70 border-slate-800 text-slate-400'"
                       >
                         <span class="text-xl mb-0.5">{{ h.icon }}</span>
@@ -375,8 +384,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (ec of eyeColors; track ec.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.eyeColor = ec.id"
-                        class="p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer"
+                        (click)="updateAvatarProp({ eyeColor: ec.id })"
+                        class="p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer interactive-spring"
                         [ngClass]="editAvatarConfig.eyeColor === ec.id ? 'border-purple-400 bg-purple-950/40 ring-1 ring-purple-400' : 'border-slate-800 bg-slate-950/60'"
                       >
                         <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold" [style.background-color]="ec.hex">
@@ -394,8 +403,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (eye of eyeShapes; track eye.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.eyeShape = eye.id"
-                        class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2"
+                        (click)="updateAvatarProp({ eyeShape: eye.id })"
+                        class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2 interactive-spring"
                         [ngClass]="editAvatarConfig.eyeShape === eye.id ? 'bg-purple-600/25 border-purple-500 text-white' : 'bg-slate-950/70 border-slate-800 text-slate-400'"
                       >
                         <span class="text-xl">{{ eye.icon }}</span>
@@ -414,8 +423,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (brow of eyebrows; track brow.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.eyebrows = brow.id"
-                        class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2"
+                        (click)="updateAvatarProp({ eyebrows: brow.id })"
+                        class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2 interactive-spring"
                         [ngClass]="editAvatarConfig.eyebrows === brow.id ? 'bg-purple-600/25 border-purple-500 text-white' : 'bg-slate-950/70 border-slate-800 text-slate-400'"
                       >
                         <span class="text-xl">{{ brow.icon }}</span>
@@ -439,8 +448,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (lip of lipColors; track lip.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.lipColor = lip.id"
-                        class="p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer"
+                        (click)="updateAvatarProp({ lipColor: lip.id })"
+                        class="p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer interactive-spring"
                         [ngClass]="editAvatarConfig.lipColor === lip.id ? 'border-purple-400 bg-purple-950/40 ring-1 ring-purple-400' : 'border-slate-800 bg-slate-950/60'"
                       >
                         <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold" [style.background-color]="lip.hex">
@@ -458,8 +467,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (m of mouthExpressions; track m.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.mouthExpression = m.id"
-                        class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2"
+                        (click)="updateAvatarProp({ mouthExpression: m.id })"
+                        class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2 interactive-spring"
                         [ngClass]="editAvatarConfig.mouthExpression === m.id ? 'bg-purple-600/25 border-purple-500 text-white' : 'bg-slate-950/70 border-slate-800 text-slate-400'"
                       >
                         <span class="text-xl">{{ m.icon }}</span>
@@ -483,8 +492,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (oc of outfitColors; track oc.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.outfitColor = oc.id"
-                        class="p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer"
+                        (click)="updateAvatarProp({ outfitColor: oc.id })"
+                        class="p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer interactive-spring"
                         [ngClass]="editAvatarConfig.outfitColor === oc.id ? 'border-purple-400 bg-purple-950/40 ring-1 ring-purple-400' : 'border-slate-800 bg-slate-950/60'"
                       >
                         <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold" [style.background-color]="oc.hex">
@@ -502,8 +511,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                     @for (outfit of outfitStyles; track outfit.id) {
                       <button
                         type="button"
-                        (click)="editAvatarConfig.outfitStyle = outfit.id"
-                        class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2"
+                        (click)="updateAvatarProp({ outfitStyle: outfit.id })"
+                        class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2 interactive-spring"
                         [ngClass]="editAvatarConfig.outfitStyle === outfit.id ? 'bg-purple-600/25 border-purple-500 text-white' : 'bg-slate-950/70 border-slate-800 text-slate-400'"
                       >
                         <span class="text-xl">{{ outfit.icon }}</span>
@@ -526,8 +535,8 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
                   @for (acc of accessories; track acc.id) {
                     <button
                       type="button"
-                      (click)="editAvatarConfig.accessory = acc.id"
-                      class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2"
+                      (click)="updateAvatarProp({ accessory: acc.id })"
+                      class="p-2.5 rounded-xl border text-right transition cursor-pointer flex items-center gap-2 interactive-spring"
                       [ngClass]="editAvatarConfig.accessory === acc.id ? 'bg-purple-600/25 border-purple-500 text-white' : 'bg-slate-950/70 border-slate-800 text-slate-400'"
                     >
                       <span class="text-xl">{{ acc.icon }}</span>
@@ -546,24 +555,45 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
       </div>
 
       <!-- Dialog Footer -->
-      <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-2.5 shrink-0">
-        <button
-          type="button"
-          (click)="closeModal()"
-          class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-        >
-          انصراف
-        </button>
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2.5 shrink-0">
+        @if (activeTab() === 'avatar') {
+          <div class="flex items-center gap-2 text-xs text-emerald-400 font-semibold select-none">
+            <span class="flex h-2.5 w-2.5 relative">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span>تغییرات در لحظه ذخیره و اعمال شدند</span>
+          </div>
 
-        <button
-          type="button"
-          (click)="saveProfile()"
-          [disabled]="isSaving()"
-          class="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-900/40 hover:brightness-110 active:scale-95 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-        >
-          <span>✓</span>
-          <span>{{ isSaving() ? 'در حال ذخیره...' : 'ذخیره تغییرات' }}</span>
-        </button>
+          <button
+            type="button"
+            (click)="closeModal()"
+            class="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-900/40 hover:brightness-110 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
+          >
+            <span>✓</span>
+            <span>بستن</span>
+          </button>
+        } @else {
+          <div class="flex items-center justify-end gap-2.5 w-full">
+            <button
+              type="button"
+              (click)="closeModal()"
+              class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            >
+              انصراف
+            </button>
+
+            <button
+              type="button"
+              (click)="saveProfile()"
+              [disabled]="isSaving()"
+              class="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-900/40 hover:brightness-110 active:scale-95 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <span>✓</span>
+              <span>{{ isSaving() ? 'در حال ذخیره...' : 'ذخیره مشخصات' }}</span>
+            </button>
+          </div>
+        }
       </div>
     </dialog>
   `,
@@ -574,7 +604,7 @@ type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories
     }
   `],
 })
-export class ProfileModalComponent implements OnInit {
+export class ProfileModalComponent implements OnInit, OnDestroy {
   @ViewChild('profileDialog') dialogRef?: ElementRef<HTMLDialogElement>;
 
   @Input() profile: UserProfile | null = null;
@@ -609,6 +639,9 @@ export class ProfileModalComponent implements OnInit {
   readonly outfitColors = OUTFIT_COLOR_OPTIONS;
   readonly accessories = ACCESSORY_OPTIONS;
 
+  private readonly avatarAutoSaveSubject = new Subject<AvatarCustomization>();
+  private avatarAutoSaveSub?: Subscription;
+
   ngOnInit(): void {
     if (this.profile) {
       this.editName = this.profile.name || '';
@@ -619,6 +652,19 @@ export class ProfileModalComponent implements OnInit {
     } else {
       this.editAvatarConfig = sanitizeAvatarConfig(this.themeService.customization());
     }
+
+    // Debounced automatic backend synchronization for avatar edits
+    this.avatarAutoSaveSub = this.avatarAutoSaveSubject.pipe(
+      debounceTime(350),
+      switchMap((config) => this.apiService.updateProfile({ avatar_config: config }))
+    ).subscribe({
+      next: () => {},
+      error: (err) => console.warn('Auto-save profile avatar to backend failed:', err),
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.avatarAutoSaveSub?.unsubscribe();
   }
 
   ngAfterViewInit(): void {
@@ -628,8 +674,21 @@ export class ProfileModalComponent implements OnInit {
     }
   }
 
+  updateAvatarProp(changes: Partial<AvatarCustomization>): void {
+    this.editAvatarConfig = { ...this.editAvatarConfig, ...changes };
+    this.onAvatarConfigChanged();
+  }
+
   randomizeAvatar(): void {
     this.editAvatarConfig = this.themeService.getRandomAvatar();
+    this.onAvatarConfigChanged();
+  }
+
+  private onAvatarConfigChanged(): void {
+    // 1. Immediately apply to ThemeService (updates signal, saves to localStorage, applies theme variables)
+    this.themeService.saveCustomization(this.editAvatarConfig);
+    // 2. Queue debounced backend update
+    this.avatarAutoSaveSubject.next(this.editAvatarConfig);
   }
 
   saveProfile(): void {
