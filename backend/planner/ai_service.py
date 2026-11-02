@@ -1025,3 +1025,313 @@ def process_voice_to_tasks(
                 ]
             }
         return get_mock_plan(text_input or str(e))
+
+
+def time_to_minutes(time_str: str) -> int:
+    """Converts HH:MM string to total minutes since midnight."""
+    try:
+        norm = normalize_time_str(time_str, "12:00")
+        parts = norm.split(":")
+        return int(parts[0]) * 60 + int(parts[1])
+    except Exception:
+        return 12 * 60
+
+
+def minutes_to_time(minutes: int) -> str:
+    """Converts total minutes to 24-hour HH:MM format."""
+    m = minutes % (24 * 60)
+    h = m // 60
+    mn = m % 60
+    return f"{h:02d}:{mn:02d}"
+
+
+def process_panic_reschedule(
+    tasks: List[dict],
+    current_time_str: str = "15:00",
+    reason: str = "برنامه‌ام به هم ریخت",
+    profile: Optional[any] = None,
+) -> dict:
+    """
+    Emergency Rescheduling ("Panic Button"):
+    Analyzes uncompleted tasks, shifts essential tasks forward starting from current_time_str,
+    compresses long/monolithic durations, and defers low-priority non-essential tasks to tomorrow.
+    Returns rescheduled and deferred tasks with an empathetic avatar cheer-up response.
+    """
+    use_mock = os.getenv("USE_MOCK_AI", "True").lower() in ("true", "1", "yes")
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    base_url = os.getenv("OPENAI_BASE_URL", "https://api.avalai.ir/v1")
+    ai_model = os.getenv("AI_MODEL", "gemini-2.5-flash")
+
+    user_name = "سارا"
+    sleep_time_str = "23:00"
+    if profile:
+        user_name = getattr(profile, "name", "کاربر") or "کاربر"
+        s_val = getattr(profile, "sleep_time", "23:00")
+        sleep_time_str = s_val.strftime("%H:%M") if hasattr(s_val, "strftime") else str(s_val)[:5]
+
+    norm_current = normalize_time_str(current_time_str, "15:00")
+    curr_minutes = time_to_minutes(norm_current)
+    sleep_minutes = time_to_minutes(sleep_time_str)
+    # If sleep time is around midnight/early morning (e.g. 00:00 - 04:00), treat as past 24:00
+    if sleep_minutes < 300:
+        sleep_minutes += 1440
+
+    if not tasks:
+        return {
+            "avatar_reaction": {
+                "mood": "supportive",
+                "voice_reply": f"عزیزم هیچ تسک انجام‌نشده‌ای برای امروزت نمونده! خیالت راحت باشه و با آرامش استراحت کن. 🌸✨"
+            },
+            "rescheduled_tasks": [],
+            "deferred_tasks": [],
+        }
+
+    # Algorithmic calculation (used directly in mock mode, or as fallback)
+    # Sort tasks: high priority first, then medium, then low
+    priority_weight = {"high": 3, "medium": 2, "low": 1}
+    sorted_tasks = sorted(
+        tasks,
+        key=lambda x: (-priority_weight.get(str(x.get("priority", "medium")).lower(), 2), x.get("scheduled_time", "12:00"))
+    )
+
+    rescheduled = []
+    deferred = []
+    pointer = curr_minutes + 5  # Give 5 minutes breathing room from right now
+
+    for t in sorted_tasks:
+        tid = t.get("id")
+        t_priority = str(t.get("priority", "medium")).lower()
+        orig_dur = t.get("duration_minutes", 30)
+
+        # Defer low priority tasks immediately to tomorrow to relieve stress
+        if t_priority == "low":
+            deferred.append({
+                "id": tid,
+                "scheduled_time": "10:30",
+                "duration_minutes": orig_dur,
+                "deferred_to_tomorrow": True,
+            })
+            continue
+
+        # If task is long (>= 45m), compress slightly (e.g. by 25%) so it's manageable
+        compressed_dur = max(25, int(orig_dur * 0.75)) if orig_dur >= 45 else orig_dur
+
+        # Check if scheduling this task would overflow past sleep time
+        if pointer + compressed_dur > sleep_minutes - 15:
+            # Overflows past sleep hour, defer to tomorrow
+            deferred.append({
+                "id": tid,
+                "scheduled_time": "11:00",
+                "duration_minutes": orig_dur,
+                "deferred_to_tomorrow": True,
+            })
+        else:
+            new_time = minutes_to_time(pointer)
+            rescheduled.append({
+                "id": tid,
+                "scheduled_time": new_time,
+                "duration_minutes": compressed_dur,
+                "deferred_to_tomorrow": False,
+            })
+            pointer += compressed_dur + 10  # 10 minutes break between tasks
+
+    warm_voice_reply = (
+        f"اصلاً نگران نباش {user_name} جان! روزت هنوز تموم نشده. "
+        f"کارهای غیرضروری رو منتقل کردم به فردا و بقیه کارهات رو از همین الان مرتب و جمع‌وجور کردم. "
+        f"نفس عمیق بکش و بیا با هم پرانرژی شروع کنیم! 🌸✨"
+    )
+
+    algorithmic_result = {
+        "avatar_reaction": {
+            "mood": "supportive",
+            "voice_reply": warm_voice_reply,
+        },
+        "rescheduled_tasks": rescheduled,
+        "deferred_tasks": deferred,
+    }
+
+    if use_mock or not api_key or api_key == "your_key_here":
+        return algorithmic_result
+
+    # If LLM is enabled, attempt LLM call
+    try:
+        client = openai.OpenAI(api_key=api_key, base_url=base_url)
+        system_prompt = (
+            "You are Tasky, an empathetic, encouraging Persian personal assistant.\n"
+            f"The user hit the PANIC BUTTON because their schedule fell apart ('{reason}') at {norm_current}.\n"
+            f"User sleep time: {sleep_time_str}. User Name: {user_name}.\n"
+            "Rearrange remaining tasks sequentially from current_time, compress large tasks slightly, "
+            "and defer low-priority tasks to tomorrow so the user feels immediate relief.\n"
+            "Respond in JSON format with 'avatar_reaction' ('mood': 'supportive', 'voice_reply': sweet, calming colloquial Persian encouragement) "
+            "and 'rescheduled_tasks' (list of {id, scheduled_time, duration_minutes}) and 'deferred_tasks' (list of {id, scheduled_time, duration_minutes})."
+        )
+        completion = client.chat.completions.create(
+            model=ai_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": json.dumps({"tasks": tasks, "current_time": norm_current}, ensure_ascii=False)}
+            ],
+            response_format={"type": "json_object"},
+        )
+        content = completion.choices[0].message.content or ""
+        parsed = json.loads(content)
+        if "avatar_reaction" in parsed and ("rescheduled_tasks" in parsed or "deferred_tasks" in parsed):
+            clean_rescheduled = []
+            for r in parsed.get("rescheduled_tasks", []):
+                clean_rescheduled.append({
+                    "id": r.get("id"),
+                    "scheduled_time": normalize_time_str(r.get("scheduled_time"), "15:00"),
+                    "duration_minutes": int(r.get("duration_minutes", 30)) if str(r.get("duration_minutes", "")).isdigit() else 30,
+                    "deferred_to_tomorrow": False,
+                })
+            clean_deferred = []
+            for d in parsed.get("deferred_tasks", []):
+                clean_deferred.append({
+                    "id": d.get("id"),
+                    "scheduled_time": normalize_time_str(d.get("scheduled_time"), "10:30"),
+                    "duration_minutes": int(d.get("duration_minutes", 30)) if str(d.get("duration_minutes", "")).isdigit() else 30,
+                    "deferred_to_tomorrow": True,
+                })
+            return {
+                "avatar_reaction": {
+                    "mood": parsed["avatar_reaction"].get("mood", "supportive"),
+                    "voice_reply": parsed["avatar_reaction"].get("voice_reply", warm_voice_reply),
+                },
+                "rescheduled_tasks": clean_rescheduled or rescheduled,
+                "deferred_tasks": clean_deferred or deferred,
+            }
+    except Exception as e:
+        logger.warning(f"LLM panic reschedule failed, using algorithmic fallback: {e}")
+
+    return algorithmic_result
+
+
+def process_task_breakdown(
+    task: dict,
+    profile: Optional[any] = None,
+) -> dict:
+    """
+    Subtask Breakdown for Overwhelming Tasks:
+    Takes a complex or long task (e.g. duration >= 45m) and breaks it down into 2 to 4
+    actionable, sequential micro-steps (20-30m each).
+    """
+    use_mock = os.getenv("USE_MOCK_AI", "True").lower() in ("true", "1", "yes")
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    base_url = os.getenv("OPENAI_BASE_URL", "https://api.avalai.ir/v1")
+    ai_model = os.getenv("AI_MODEL", "gemini-2.5-flash")
+
+    title = task.get("title", "تسک")
+    total_dur = task.get("duration_minutes", 60)
+    start_time_str = normalize_time_str(task.get("scheduled_time", "10:00"), "10:00")
+    start_minutes = time_to_minutes(start_time_str)
+    category = task.get("category", "work")
+    icon = task.get("icon", "briefcase")
+    priority = task.get("priority", "medium")
+
+    # Algorithmic calculation
+    if total_dur <= 45:
+        step_counts = 2
+        durs = [int(total_dur * 0.55), total_dur - int(total_dur * 0.55)]
+        step_titles = [
+            f"فاز ۱: شروع و پیاده‌سازی بخش اول «{title}»",
+            f"فاز ۲: تکمیل و بازبینی نهایی «{title}»",
+        ]
+    elif total_dur <= 90:
+        step_counts = 3
+        d1 = max(15, int(total_dur * 0.35))
+        d2 = max(20, int(total_dur * 0.40))
+        d3 = max(10, total_dur - d1 - d2)
+        durs = [d1, d2, d3]
+        step_titles = [
+            f"فاز ۱: آماده‌سازی و مقدمات «{title}»",
+            f"فاز ۲: تمرکز روی بخش اصلی «{title}»",
+            f"فاز ۳: جمع‌بندی و کنترل کیفیت «{title}»",
+        ]
+    else:
+        step_counts = 4
+        d1 = int(total_dur * 0.25)
+        d2 = int(total_dur * 0.30)
+        d3 = int(total_dur * 0.25)
+        d4 = max(15, total_dur - d1 - d2 - d3)
+        durs = [d1, d2, d3, d4]
+        step_titles = [
+            f"فاز ۱: ساختار و برنامه‌ریزی «{title}»",
+            f"فاز ۲: اجرای بخش اول «{title}»",
+            f"فاز ۳: توسعه و پیاده‌سازی بخش دوم «{title}»",
+            f"فاز ۴: تست نهایی و جمع‌بندی «{title}»",
+        ]
+
+    subtasks = []
+    pointer = start_minutes
+    for i in range(step_counts):
+        sub_dur = durs[i]
+        subtasks.append({
+            "title": step_titles[i],
+            "scheduled_time": minutes_to_time(pointer),
+            "duration_minutes": sub_dur,
+            "priority": priority,
+            "category": category,
+            "icon": icon,
+            "notification_text": f"وقت انجام {step_titles[i]} رسید! با تمرکز شروع کن. ✨",
+        })
+        pointer += sub_dur
+
+    voice_reply = f"عالی شد! تسک «{title}» رو به {step_counts} مرحله سبک و شفاف تقسیم کردم تا بدون هیچ استرسی انجامش بدی! 🧩✨"
+
+    algorithmic_result = {
+        "avatar_reaction": {
+            "mood": "excited",
+            "voice_reply": voice_reply,
+        },
+        "subtasks": subtasks,
+    }
+
+    if use_mock or not api_key or api_key == "your_key_here":
+        return algorithmic_result
+
+    # If LLM is available, invoke LLM for contextual breakdown
+    try:
+        client = openai.OpenAI(api_key=api_key, base_url=base_url)
+        system_prompt = (
+            "You are Tasky, an enthusiastic productivity companion.\n"
+            f"The user wants to break down the overwhelming task «{title}» ({total_dur} minutes, starting at {start_time_str}).\n"
+            "Decompose it into 2 to 4 actionable, sequential micro-steps in fluent colloquial Persian.\n"
+            "Each micro-step MUST have: 'title', 'scheduled_time' (sequential in HH:MM), 'duration_minutes' (summing to approximately the original duration), 'priority', 'category', 'icon', 'notification_text'.\n"
+            "Return JSON with 'avatar_reaction' ('mood': 'excited', 'voice_reply': upbeat cheering Persian message) and 'subtasks' (list of micro-steps)."
+        )
+        completion = client.chat.completions.create(
+            model=ai_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": json.dumps(task, ensure_ascii=False)}
+            ],
+            response_format={"type": "json_object"},
+        )
+        content = completion.choices[0].message.content or ""
+        parsed = json.loads(content)
+        if "subtasks" in parsed and len(parsed["subtasks"]) >= 2:
+            clean_subtasks = []
+            for sub in parsed["subtasks"]:
+                dur_raw = str(sub.get("duration_minutes", 20))
+                dur_val = int(dur_raw) if dur_raw.isdigit() else 20
+                clean_subtasks.append({
+                    "title": sub.get("title", f"مرحله از {title}"),
+                    "scheduled_time": normalize_time_str(sub.get("scheduled_time"), start_time_str),
+                    "duration_minutes": dur_val,
+                    "priority": sub.get("priority", priority),
+                    "category": sub.get("category", category),
+                    "icon": sub.get("icon", icon),
+                    "notification_text": sub.get("notification_text", f"یادآور: {sub.get('title')}"),
+                })
+            return {
+                "avatar_reaction": {
+                    "mood": parsed.get("avatar_reaction", {}).get("mood", "excited"),
+                    "voice_reply": parsed.get("avatar_reaction", {}).get("voice_reply", voice_reply),
+                },
+                "subtasks": clean_subtasks,
+            }
+    except Exception as e:
+        logger.warning(f"LLM task breakdown failed, using algorithmic fallback: {e}")
+
+    return algorithmic_result
+

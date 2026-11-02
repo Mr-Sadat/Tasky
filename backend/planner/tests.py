@@ -725,3 +725,123 @@ class AIProfileContextInjectionTests(APITestCase):
             self.assertGreater(len(res_valid.content), 0)
 
 
+
+    @patch.dict(os.environ, {"USE_MOCK_AI": "True"})
+    def test_panic_reschedule_view_endpoint(self):
+        """Test POST /api/tasks/panic-reschedule/ intelligently shifts tasks and defers low priority to tomorrow."""
+        today = timezone.localdate()
+        tomorrow = today + datetime.timedelta(days=1)
+
+        UserProfile.objects.create(
+            name="سارا",
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        task_high = Task.objects.create(
+            title="جلسه کاری مهم",
+            scheduled_time="14:00",
+            duration_minutes=60,
+            priority="high",
+            category="work",
+            date=today,
+            is_completed=False,
+        )
+        task_med = Task.objects.create(
+            title="مطالعه درس",
+            scheduled_time="15:30",
+            duration_minutes=45,
+            priority="medium",
+            category="study",
+            date=today,
+            is_completed=False,
+        )
+        task_low = Task.objects.create(
+            title="خرید گل برای بالکن",
+            scheduled_time="16:30",
+            duration_minutes=30,
+            priority="low",
+            category="shopping",
+            date=today,
+            is_completed=False,
+        )
+
+        response = self.client.post(
+            "/api/tasks/panic-reschedule/",
+            {
+                "reason": "ترافیک سنگین بود و ۲ ساعت عقب افتادم",
+                "current_time": "17:00",
+                "date": today.isoformat(),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+
+        self.assertIn("avatar_reaction", data)
+        self.assertTrue(len(data["avatar_reaction"]["voice_reply"]) > 0)
+        self.assertIn(data["avatar_reaction"]["mood"], ["supportive", "happy", "excited"])
+
+        # Check that low priority task is deferred to tomorrow
+        task_low.refresh_from_db()
+        self.assertEqual(task_low.date, tomorrow)
+
+        # Check that high/medium tasks are scheduled after 17:00 today
+        task_high.refresh_from_db()
+        task_med.refresh_from_db()
+        self.assertEqual(task_high.date, today)
+        self.assertEqual(task_med.date, today)
+        self.assertGreaterEqual(task_high.scheduled_time.strftime("%H:%M"), "17:00")
+
+        # Check VoiceLog created
+        self.assertTrue(VoiceLog.objects.filter(raw_text__contains="وضعیت اضطراری").exists())
+
+    def test_panic_reschedule_no_uncompleted_tasks(self):
+        """Test panic reschedule when no tasks are pending returns supportive message."""
+        today = timezone.localdate()
+        response = self.client.post(
+            "/api/tasks/panic-reschedule/",
+            {"current_time": "18:00", "date": today.isoformat()},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertIn("avatar_reaction", data)
+        self.assertEqual(data["rescheduled_count"], 0)
+        self.assertEqual(data["deferred_count"], 0)
+
+    @patch.dict(os.environ, {"USE_MOCK_AI": "True"})
+    def test_task_breakdown_view_endpoint(self):
+        """Test POST /api/tasks/<id>/breakdown/ breaks monolithic task into sequential micro-steps."""
+        today = timezone.localdate()
+        task = Task.objects.create(
+            title="پیاده‌سازی ماژول پرداخت آنلاین",
+            scheduled_time="14:00",
+            duration_minutes=90,
+            priority="high",
+            category="work",
+            date=today,
+            is_completed=False,
+        )
+
+        response = self.client.post(f"/api/tasks/{task.id}/breakdown/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+
+        self.assertIn("subtasks", data)
+        self.assertTrue(len(data["subtasks"]) >= 2)
+        self.assertIn("avatar_reaction", data)
+
+        # Original task should be replaced
+        self.assertFalse(Task.objects.filter(id=task.id).exists())
+
+        # Subtasks should be in DB with sequential times starting at 14:00
+        subtasks_in_db = Task.objects.filter(date=today, category="work").order_by("scheduled_time")
+        self.assertTrue(subtasks_in_db.count() >= 2)
+        self.assertEqual(subtasks_in_db.first().scheduled_time.strftime("%H:%M"), "14:00")
+
+    def test_task_breakdown_not_found(self):
+        """Test breakdown on non-existent task returns 404."""
+        response = self.client.post("/api/tasks/99999/breakdown/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

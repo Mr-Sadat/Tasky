@@ -102,3 +102,5 @@ Phase 3: Cute Avatar Animations (Rive/Lottie) & Local Notifications (Wait for Ow
 [x] Phase 4: Personalized Onboarding Wizard & Dynamic AI Guidelines (Schedule & Tone Context Injection)
 
 [x] Phase 5: Viral Productivity Enhancements (Dynamic Time-Blocking, Contextual Avatar Costumes, Voice-Back TTS & Aesthetic Story Card)
+
+[x] Phase 6: Emergency Panic Rescheduling ("روز من به هم ریخت! 🚨") & Overwhelming Task Subtask Breakdown ("خرد کردن تسک 🧩")

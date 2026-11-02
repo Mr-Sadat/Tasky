@@ -20,16 +20,31 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
           </span>
         </div>
 
-        <!-- Share Today's Recap / Story Button -->
-        <button
-          type="button"
-          (click)="openStoryRecap.emit()"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-md shadow-purple-950/50 interactive-spring cursor-pointer border border-purple-400/30 select-none transition"
-          title="مشاهده و دریافت تصویر کارنامه روز برای استوری اینستاگرام / تلگرام (✨)"
-        >
-          <span>📜</span>
-          <span>کارنامه روز من</span>
-        </button>
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Panic Button (Emergency Reschedule) -->
+          @if (uncompletedCount() > 0 && (selectedDate === 'today' || selectedDate === 'all')) {
+            <button
+              type="button"
+              (click)="triggerPanic.emit()"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 hover:brightness-110 active:scale-95 text-white text-xs font-bold shadow-md shadow-rose-950/60 interactive-spring cursor-pointer border border-rose-400/40 select-none transition animate-pulse"
+              title="برنامه‌ام به هم ریخته یا عقب افتادم! بازتنظیم هوشمند تسک‌های باقی‌مانده (🚨)"
+            >
+              <span>🚨</span>
+              <span>روز من به هم ریخت!</span>
+            </button>
+          }
+
+          <!-- Share Today's Recap / Story Button -->
+          <button
+            type="button"
+            (click)="openStoryRecap.emit()"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-md shadow-purple-950/50 interactive-spring cursor-pointer border border-purple-400/30 select-none transition"
+            title="مشاهده و دریافت تصویر کارنامه روز برای استوری اینستاگرام / تلگرام (✨)"
+          >
+            <span>📜</span>
+            <span>کارنامه روز من</span>
+          </button>
+        </div>
       </div>
 
       <!-- Horizontal Persian Jalali Date Bar -->
@@ -174,7 +189,7 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
               </div>
             </div>
 
-            <!-- Footer Row: Date badge, Quick Micro-Actions (+15m, +30m, Tomorrow) & Delete -->
+            <!-- Footer Row: Date badge, Quick Micro-Actions (+15m, +30m, Tomorrow, Breakdown) & Delete -->
             <div class="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-slate-700/40 flex-wrap">
               <!-- Left side: Jalali date or priority badge -->
               <div class="flex items-center gap-1.5">
@@ -193,8 +208,8 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
                 </span>
               </div>
 
-              <!-- Right side: Quick Reschedule Micro-Actions + Delete -->
-              <div class="flex items-center gap-1">
+              <!-- Right side: Quick Reschedule Micro-Actions + Breakdown + Delete -->
+              <div class="flex items-center gap-1 flex-wrap">
                 @if (!task.is_completed) {
                   <!-- +15m Button -->
                   <button
@@ -225,6 +240,24 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
                   >
                     فردا ⏭
                   </button>
+
+                  <!-- Breakdown Subtask Button for long tasks (duration >= 60 min) -->
+                  @if (task.duration_minutes >= 60) {
+                    <button
+                      type="button"
+                      (click)="onBreakdown(task)"
+                      [disabled]="breakingDownTaskId === task.id"
+                      class="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-950/70 hover:bg-amber-900/80 text-amber-200 hover:text-white border border-amber-500/40 hover:border-amber-400 transition cursor-pointer flex items-center gap-1 interactive-spring disabled:opacity-50"
+                      title="خرد کردن تسک طولانی به گام‌های کوچک و شفاف (🧩)"
+                    >
+                      @if (breakingDownTaskId === task.id) {
+                        <span class="w-2.5 h-2.5 border-2 border-amber-300/30 border-t-amber-300 rounded-full animate-spin"></span>
+                      } @else {
+                        <span>🧩</span>
+                      }
+                      <span>خرد کردن تسک</span>
+                    </button>
+                  }
                 }
 
                 <!-- Delete button -->
@@ -252,12 +285,15 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
   @Input() tasks: Task[] = [];
   @Input() selectedDate: string = 'today';
   @Input() dateTabs: JalaliDateTab[] = [];
+  @Input() breakingDownTaskId: number | null = null;
   
   @Output() dateSelected = new EventEmitter<string>();
   @Output() toggleTask = new EventEmitter<{ task: Task; isCompleted: boolean }>();
   @Output() deleteTask = new EventEmitter<Task>();
   @Output() rescheduleTask = new EventEmitter<{ task: Task; minutesToAdd?: number; toTomorrow?: boolean }>();
   @Output() openStoryRecap = new EventEmitter<void>();
+  @Output() triggerPanic = new EventEmitter<void>();
+  @Output() breakdownTask = new EventEmitter<Task>();
 
   private clockTimer: any = null;
   readonly nowMinutes = signal<number>(this.calculateNowMinutes());
@@ -305,59 +341,56 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
     return this.tasks.filter(t => t.is_completed).length;
   }
 
+  uncompletedCount(): number {
+    return this.tasks.filter(t => !t.is_completed).length;
+  }
+
+  onBreakdown(task: Task): void {
+    this.breakdownTask.emit(task);
+  }
+
   formatTime(timeStr: string): string {
     if (!timeStr) return '';
     const parts = timeStr.split(':');
+    if (parts.length < 2) return timeStr;
     return `${parts[0]}:${parts[1]}`;
   }
 
-  /**
-   * Proportional Card Heights for Time-Blocking
-   */
-  getCardMinHeightClass(durationMinutes: number): string {
-    const dur = durationMinutes || 30;
-    if (dur <= 20) return 'min-h-[85px]';
-    if (dur <= 45) return 'min-h-[105px]';
-    if (dur <= 75) return 'min-h-[125px]';
-    if (dur <= 100) return 'min-h-[145px]';
-    return 'min-h-[170px]';
-  }
-
-  /**
-   * Check if task is actively taking place right now
-   */
   isTaskActive(task: Task): boolean {
     if (task.is_completed || !task.scheduled_time) return false;
-
-    // Check if task is for today
     const todayIso = new Date().toISOString().split('T')[0];
     if (task.date && task.date !== todayIso) return false;
 
     const parts = task.scheduled_time.split(':');
     if (parts.length < 2) return false;
 
-    const startMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-    const duration = task.duration_minutes || 30;
-    const endMinutes = startMinutes + duration;
+    const start = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    const end = start + (task.duration_minutes || 30);
     const current = this.nowMinutes();
 
-    return current >= startMinutes && current < endMinutes;
+    return current >= start && current < end;
   }
 
-  /**
-   * Calculate % progress of ongoing active task
-   */
   getActiveTaskProgress(task: Task): number {
-    if (!task.scheduled_time) return 0;
+    if (!this.isTaskActive(task)) return 0;
     const parts = task.scheduled_time.split(':');
-    const startMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-    const duration = task.duration_minutes || 30;
-    const elapsed = this.nowMinutes() - startMinutes;
-
-    return Math.max(0, Math.min(100, Math.round((elapsed / duration) * 100)));
+    const start = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    const dur = task.duration_minutes || 30;
+    const current = this.nowMinutes();
+    const elapsed = current - start;
+    const pct = Math.round((elapsed / dur) * 100);
+    return Math.max(0, Math.min(100, pct));
   }
 
-  getCategoryEmoji(icon: TaskIcon | string): string {
+  getCardMinHeightClass(durationMinutes?: number): string {
+    const d = durationMinutes || 30;
+    if (d <= 30) return 'min-h-[74px]';
+    if (d <= 60) return 'min-h-[96px]';
+    if (d <= 90) return 'min-h-[118px]';
+    return 'min-h-[136px]';
+  }
+
+  getCategoryEmoji(icon: TaskIcon): string {
     switch (icon) {
       case 'briefcase': return '💼';
       case 'book': return '📚';
@@ -368,15 +401,15 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
       case 'coffee': return '☕';
       case 'moon': return '🌙';
       case 'sun': return '☀️';
-      default: return '⭐';
+      default: return '📌';
     }
   }
 
   getPriorityLabel(priority: TaskPriority): string {
     switch (priority) {
       case 'high': return 'فوری';
-      case 'medium': return 'مهم';
-      case 'low': return 'عادی';
+      case 'medium': return 'متوسط';
+      case 'low': return 'معمولی';
       default: return 'عادی';
     }
   }

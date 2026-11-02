@@ -26,8 +26,22 @@
           </div>
         </div>
 
-        <!-- Header Actions: Profile, Notifications & Date Pill -->
+        <!-- Header Actions: Panic Button, Profile, Notifications & Date Pill -->
         <div class="flex items-center gap-1.5 sm:gap-2">
+          <!-- Panic Button Header Quick Action -->
+          @if (uncompletedCount() > 0) {
+            <button
+              type="button"
+              (click)="openPanicModal()"
+              class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-950/70 border border-rose-500/40 text-rose-200 text-xs hover:bg-rose-900/80 interactive-spring cursor-pointer shadow-sm shadow-rose-950/40 select-none animate-pulse"
+              title="روز من به هم ریخت! بازتنظیم اضطراری هوشمند (🚨)"
+              aria-label="دکمه اضطراری روز من به هم ریخت"
+            >
+              <span class="text-xs">🚨</span>
+              <span class="text-[11px] font-bold hidden sm:inline">به هم ریختم!</span>
+            </button>
+          }
+
           <!-- Profile & AI Brain Button -->
           <button
             type="button"
@@ -139,16 +153,19 @@
           (studioClick)="themeService.openStudio()"
         ></app-avatar-card>
 
-        <!-- Task Timeline -->
+        <!-- Task Timeline with Panic Trigger & Breakdown Actions -->
         <app-task-timeline
           [tasks]="tasks()"
           [selectedDate]="selectedDate()"
           [dateTabs]="dateTabs()"
+          [breakingDownTaskId]="breakingDownTaskId()"
           (dateSelected)="onDateSelected($event)"
           (toggleTask)="onToggleTask($event)"
           (rescheduleTask)="onRescheduleTask($event)"
           (openStoryRecap)="openStoryModal()"
           (deleteTask)="onDeleteTask($event)"
+          (triggerPanic)="openPanicModal()"
+          (breakdownTask)="onBreakdownTask($event)"
         ></app-task-timeline>
       </div>
 
@@ -161,6 +178,16 @@
           (recordingStateChange)="onRecordingStateChanged($event)"
         ></app-voice-input>
       </div>
+
+      <!-- Emergency Panic Reschedule Modal -->
+      @if (isPanicModalOpen()) {
+        <app-panic-modal
+          [isProcessing]="isPanicProcessing()"
+          [uncompletedTasksCount]="uncompletedCount()"
+          (close)="closePanicModal()"
+          (confirm)="onPanicConfirmed($event)"
+        ></app-panic-modal>
+      }
 
       <!-- Avatar & Theme Customization Studio Modal -->
       @if (themeService.isStudioOpen()) {

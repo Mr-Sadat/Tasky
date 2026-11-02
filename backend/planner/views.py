@@ -23,6 +23,9 @@ from .ai_service import (
     process_voice_to_tasks,
     parse_and_convert_to_gregorian,
     generate_ai_guidelines,
+    process_panic_reschedule,
+    process_task_breakdown,
+    normalize_time_str,
 )
 
 logger = logging.getLogger(__name__)
@@ -496,3 +499,176 @@ class UserProfileView(APIView):
 
     def patch(self, request, *args, **kwargs):
         return self.put(request, *args, **kwargs)
+
+
+
+class PanicRescheduleView(APIView):
+    """
+    POST /api/tasks/panic-reschedule/
+    Intelligently reschedules remaining uncompleted tasks for today:
+    - Shifts essential tasks forward from current_time with sensible duration compression.
+    - Automatically defers low-priority non-essential tasks to tomorrow.
+    - Returns updated today's tasks and deferred tasks with an empathetic avatar cheer-up response.
+    """
+    def post(self, request, *args, **kwargs):
+        reason = request.data.get("reason", "برنامه‌ام به هم ریخت")
+        current_time = request.data.get("current_time")
+        target_date_str = request.data.get("date")
+
+        target_date = parse_and_convert_to_gregorian(target_date_str, default_date=timezone.localdate())
+        if not current_time:
+            now = datetime.datetime.now()
+            current_time = f"{now.hour:02d}:{now.minute:02d}"
+
+        # Fetch remaining uncompleted tasks for today
+        uncompleted_qs = Task.objects.filter(date=target_date, is_completed=False).order_by("scheduled_time")
+        profile = UserProfile.objects.first()
+
+        tasks_data = [
+            {
+                "id": t.id,
+                "title": t.title,
+                "scheduled_time": t.scheduled_time.strftime("%H:%M"),
+                "duration_minutes": t.duration_minutes,
+                "priority": t.priority,
+                "category": t.category,
+                "icon": t.icon,
+            }
+            for t in uncompleted_qs
+        ]
+
+        result = process_panic_reschedule(
+            tasks=tasks_data,
+            current_time_str=current_time,
+            reason=reason,
+            profile=profile,
+        )
+
+        avatar_reaction = result.get("avatar_reaction", {
+            "mood": "supportive",
+            "voice_reply": "اصلاً نگران نباش! برنامه‌ت رو دوباره چیدم. بیا با هم ادامه بدیم! ✨"
+        })
+
+        tomorrow = target_date + datetime.timedelta(days=1)
+        rescheduled_objs = []
+        deferred_objs = []
+
+        from .ai_service import normalize_time_str
+
+        # Apply rescheduled tasks
+        for item in result.get("rescheduled_tasks", []):
+            item_id = item.get("id") or item.get("task_id")
+            if not item_id:
+                continue
+            try:
+                t = Task.objects.get(id=int(item_id))
+                t.scheduled_time = normalize_time_str(item.get("scheduled_time"), "15:00")
+                t.duration_minutes = item.get("duration_minutes", t.duration_minutes)
+                t.date = target_date
+                t.save()
+                rescheduled_objs.append(t)
+            except (Task.DoesNotExist, ValueError):
+                pass
+
+        # Apply deferred tasks to tomorrow
+        for item in result.get("deferred_tasks", []):
+            item_id = item.get("id") or item.get("task_id")
+            if not item_id:
+                continue
+            try:
+                t = Task.objects.get(id=int(item_id))
+                t.date = tomorrow
+                t.scheduled_time = normalize_time_str(item.get("scheduled_time"), "10:30")
+                t.save()
+                deferred_objs.append(t)
+            except (Task.DoesNotExist, ValueError):
+                pass
+
+        # Save to VoiceLog
+        VoiceLog.objects.create(
+            raw_text=f"وضعیت اضطراری: {reason}",
+            avatar_mood=avatar_reaction.get("mood", "supportive"),
+            avatar_reply=avatar_reaction.get("voice_reply", ""),
+        )
+
+        # Refreshed today's tasks
+        today_tasks = Task.objects.filter(date=target_date).order_by("scheduled_time")
+
+        return Response(
+            {
+                "avatar_reaction": avatar_reaction,
+                "tasks": TaskSerializer(today_tasks, many=True).data,
+                "deferred_tasks": TaskSerializer(deferred_objs, many=True).data,
+                "rescheduled_count": len(rescheduled_objs),
+                "deferred_count": len(deferred_objs),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class TaskBreakdownView(APIView):
+    """
+    POST /api/tasks/<int:pk>/breakdown/
+    Breaks down a monolithic or long task into 2 to 4 actionable sequential micro-steps.
+    Replaces the original task in the schedule with the micro-steps and returns the refreshed task list.
+    """
+    def post(self, request, pk, *args, **kwargs):
+        try:
+            task = Task.objects.get(pk=pk)
+        except Task.DoesNotExist:
+            return Response({"detail": "تسک مورد نظر یافت نشد."}, status=status.HTTP_404_NOT_FOUND)
+
+        profile = UserProfile.objects.first()
+        task_data = {
+            "id": task.id,
+            "title": task.title,
+            "scheduled_time": task.scheduled_time.strftime("%H:%M"),
+            "duration_minutes": task.duration_minutes,
+            "priority": task.priority,
+            "category": task.category,
+            "icon": task.icon,
+            "date": task.date.isoformat(),
+        }
+
+        result = process_task_breakdown(task_data, profile=profile)
+        subtask_items = result.get("subtasks", [])
+        avatar_reaction = result.get("avatar_reaction", {
+            "mood": "excited",
+            "voice_reply": f"تسک «{task.title}» به گام‌های کوچک و راحت تقسیم شد! 🧩✨"
+        })
+
+        created_subtasks = []
+        target_date = task.date
+        priority_val = task.priority
+        category_val = task.category
+        icon_val = task.icon
+
+        # Create sequential subtasks
+        for item in subtask_items:
+            sub = Task.objects.create(
+                title=item.get("title", f"مرحله از {task.title}"),
+                scheduled_time=normalize_time_str(item.get("scheduled_time"), task.scheduled_time.strftime("%H:%M")),
+                duration_minutes=item.get("duration_minutes", 20),
+                priority=item.get("priority", priority_val),
+                category=item.get("category", category_val),
+                icon=item.get("icon", icon_val),
+                notification_text=item.get("notification_text", f"وقت انجام: {item.get('title')}"),
+                date=target_date,
+                is_completed=False,
+            )
+            created_subtasks.append(sub)
+
+        # Delete the monolithic parent task so no duplicate booking exists
+        task.delete()
+
+        refreshed_tasks = Task.objects.filter(date=target_date).order_by("scheduled_time")
+
+        return Response(
+            {
+                "message": "تسک با موفقیت به گام‌های کوچک تقسیم شد",
+                "avatar_reaction": avatar_reaction,
+                "subtasks": TaskSerializer(created_subtasks, many=True).data,
+                "tasks": TaskSerializer(refreshed_tasks, many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )

@@ -3,6 +3,27 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Task, VoiceToPlanResponse, UserProfile, ProfileSetupPayload } from '../models/task.model';
 
+export interface PanicRescheduleResponse {
+  avatar_reaction: {
+    mood: string;
+    voice_reply: string;
+  };
+  tasks: Task[];
+  deferred_tasks: Task[];
+  rescheduled_count: number;
+  deferred_count: number;
+}
+
+export interface TaskBreakdownResponse {
+  message: string;
+  avatar_reaction: {
+    mood: string;
+    voice_reply: string;
+  };
+  subtasks: Task[];
+  tasks: Task[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -29,7 +50,6 @@ export class ApiService {
     const formData = new FormData();
 
     if (audioBlob) {
-      // Determine filename/extension based on blob type
       const mime = audioBlob.type || 'audio/webm';
       const extension = mime.includes('mp4') ? 'mp4' : mime.includes('ogg') ? 'ogg' : 'webm';
       formData.append('audio', audioBlob, `voice_note.${extension}`);
@@ -43,7 +63,6 @@ export class ApiService {
       formData.append('date', date);
     }
 
-    // Get current local time in HH:MM
     const now = new Date();
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
@@ -76,6 +95,32 @@ export class ApiService {
   }
 
   /**
+   * Emergency Reschedule ("Panic Button"):
+   * Shifts remaining uncompleted tasks forward, compresses durations, and defers low-priority tasks to tomorrow.
+   */
+  panicReschedule(reason?: string, currentTime?: string, date?: string): Observable<PanicRescheduleResponse> {
+    const payload: { reason?: string; current_time?: string; date?: string } = {};
+    if (reason && reason.trim()) payload.reason = reason.trim();
+    if (date) payload.date = date;
+
+    if (currentTime) {
+      payload.current_time = currentTime;
+    } else {
+      const now = new Date();
+      payload.current_time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    }
+
+    return this.http.post<PanicRescheduleResponse>(`${this.baseUrl}/tasks/panic-reschedule/`, payload);
+  }
+
+  /**
+   * Decompose an overwhelming or monolithic task (duration >= 45m) into 2 to 4 micro-steps.
+   */
+  breakdownTask(taskId: number): Observable<TaskBreakdownResponse> {
+    return this.http.post<TaskBreakdownResponse>(`${this.baseUrl}/tasks/${taskId}/breakdown/`, {});
+  }
+
+  /**
    * Fetch current user profile and AI guidelines.
    */
   getProfile(): Observable<UserProfile> {
@@ -96,4 +141,3 @@ export class ApiService {
     return this.http.put<UserProfile>(`${this.baseUrl}/profile/`, changes);
   }
 }
-
