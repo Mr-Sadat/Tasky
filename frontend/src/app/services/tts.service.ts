@@ -12,7 +12,11 @@ export class TtsService {
 
   private availableVoices: SpeechSynthesisVoice[] = [];
   private currentAudio: HTMLAudioElement | null = null;
-  private readonly ttsEndpoint = 'http://localhost:8000/api/tts/';
+  private readonly ttsEndpoint = (typeof window !== 'undefined' && (window as any).__TTS_ENDPOINT__)
+    ? (window as any).__TTS_ENDPOINT__
+    : (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? 'http://localhost:8000/api/tts/'
+        : '/api/tts/');
 
   constructor() {
     this.initTts();

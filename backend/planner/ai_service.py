@@ -156,7 +156,7 @@ def normalize_time_str(val: any, default_time: str = "12:00") -> str:
     for i, (p, a) in enumerate(zip(persian_digits, arabic_digits)):
         val_str = val_str.replace(p, str(i)).replace(a, str(i))
 
-    is_night = any(w in val_str for w in ["شب", "عصر", "بعدازظهر", "غروب"])
+    is_night = any(w in val_str for w in ["شب", "عصر", "بعدازظهر", "غروب", "شام"])
     is_half = any(w in val_str for w in ["نیم", "هنویم", "هنویمه"])
 
     # Match patterns like HH:MM or H:MM
@@ -1335,3 +1335,108 @@ def process_task_breakdown(
 
     return algorithmic_result
 
+
+
+def generate_morning_briefing(
+    user_name: str,
+    tasks: list,
+    date_str: Optional[str] = None,
+    profile: Optional[any] = None,
+) -> dict:
+    """
+    Daily Audio Briefing Generator:
+    Composes a warm, energetic 2-3 sentence Persian radio-style morning summary
+    referencing user name, scheduled tasks, and top priorities.
+    """
+    use_mock = os.getenv("USE_MOCK_AI", "True").lower() in ("true", "1", "yes")
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    base_url = os.getenv("OPENAI_BASE_URL", "https://api.avalai.ir/v1")
+    ai_model = os.getenv("AI_MODEL", "gemini-2.5-flash")
+
+    tasks_count = len(tasks)
+    top_task = None
+    if tasks_count > 0:
+        top_task = next((t for t in tasks if t.get("priority") == "high"), tasks[0])
+
+    top_task_title = top_task.get("title", "") if top_task else ""
+    top_task_time = str(top_task.get("scheduled_time", ""))[:5] if top_task else ""
+
+    if tasks_count == 0:
+        fallback_text = (
+            f"صبح زیبات بخیر {user_name} جان! امروز هنوز تسکی در برنامه نداری و روزت کاملاً آزاده. "
+            f"هر زمان خواستی دکمه میکروفون رو بزن تا با هم یک روز فوق‌العاده بسازیم!"
+        )
+    elif tasks_count == 1:
+        fallback_text = (
+            f"صبح پرانرژیت بخیر {user_name} عزیز! امروز یک تسک مهم داری به اسم «{top_task_title}» برای ساعت {top_task_time}. "
+            f"با تمرکز و انگیزه روزت رو شروع کن، تو فوق‌العاده‌ای!"
+        )
+    else:
+        fallback_text = (
+            f"صبح بخیر {user_name} جان! امروز رادیو تَسکی همراهته و {tasks_count} تا تسک عالی پیش‌رو داری که مهم‌ترینش «{top_task_title}» در ساعت {top_task_time} هست. "
+            f"امروز روز توئه، بزن بریم پرانرژی و موفق پیش ببریم!"
+        )
+
+    algorithmic_result = {
+        "briefing_text": fallback_text,
+        "audio_script": fallback_text,
+        "tasks_count": tasks_count,
+        "top_task": top_task_title,
+        "user_name": user_name,
+    }
+
+    if use_mock or not api_key:
+        return algorithmic_result
+
+    try:
+        task_summaries = []
+        for t in tasks[:5]:
+            t_time = str(t.get("scheduled_time", ""))[:5]
+            t_title = t.get("title", "")
+            t_prio = t.get("priority", "medium")
+            task_summaries.append(f"- {t_title} (ساعت {t_time}، اولویت: {t_prio})")
+
+        task_list_str = "\n".join(task_summaries) if task_summaries else "هیچ تسکی هنوز ثبت نشده است."
+
+        client = openai.OpenAI(api_key=api_key, base_url=base_url)
+        system_prompt = (
+            "شما مجری پرانرژی، صمیمی، کاریزماتیک و روحیه بخش «رادیو صبحگاهی تَسکی» هستید.\n"
+            "وظیفه شما تهیه یک خلاصه صوتی صبحگاهی پرانرژی و شنیدنی به زبان فارسی در ۲ تا ۳ جمله کوتاه است.\n"
+            "قوانین مهم:\n"
+            f"۱. حتماً نام کاربر ({user_name}) را در ابتدای سلام بگویید.\n"
+            "۲. به تعداد تسک‌های امروز و مهم‌ترین یا اولین تسک اشاره کنید.\n"
+            "۳. لحن باید بسیار گرم، گوینده رادیویی صبحگاهی، مثبت و انگیزه‌بخش باشد.\n"
+            "۴. از به کار بردن ایموجی در متن خودداری کنید تا برای موتور متن‌به‌صدا (TTS) کاملاً روان و طبیعی خوانده شود.\n"
+            "۵. خروجی فقط و فقط متن خام خلاصه صبحگاهی باشد بدون هیچ توضیح اضافی یا پیشوند."
+        )
+
+        user_prompt = (
+            f"نام کاربر: {user_name}\n"
+            f"لیست تسک‌های امروز:\n{task_list_str}\n\n"
+            "لطفاً خلاصه صوتی صبحگاهی رادیویی ۲ الی ۳ جمله‌ای را آماده کن."
+        )
+
+        response = client.chat.completions.create(
+            model=ai_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.7,
+            max_tokens=300,
+        )
+
+        llm_text = response.choices[0].message.content.strip() if response.choices else ""
+        llm_text = llm_text.replace('"', '').replace('`', '').strip()
+        if len(llm_text) >= 20:
+            return {
+                "briefing_text": llm_text,
+                "audio_script": llm_text,
+                "tasks_count": tasks_count,
+                "top_task": top_task_title,
+                "user_name": user_name,
+            }
+    except Exception as e:
+        logger.warning(f"LLM morning briefing generation failed, using fallback: {e}")
+
+    return algorithmic_result

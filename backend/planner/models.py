@@ -91,6 +91,9 @@ class UserProfile(models.Model):
     sleep_time = models.TimeField(default="23:00")
     avatar_config = models.JSONField(default=dict, blank=True)
     ai_guidelines = models.TextField(blank=True, default="")
+    xp = models.IntegerField(default=0)
+    streak_days = models.IntegerField(default=0)
+    last_streak_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

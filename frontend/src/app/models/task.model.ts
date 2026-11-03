@@ -100,6 +100,8 @@ export interface UserProfile {
   sleep_time: string;
   avatar_config: AvatarCustomization;
   ai_guidelines: string;
+  xp?: number;
+  streak_days?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -117,3 +119,14 @@ export interface ProfileSetupPayload {
   };
 }
 
+
+
+export interface MorningBriefingResponse {
+  briefing_text: string;
+  audio_script: string;
+  tasks_count: number;
+  top_task: string;
+  user_name: string;
+  xp: number;
+  streak_days: number;
+}

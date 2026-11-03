@@ -13,6 +13,7 @@ import { WizardComponent } from './components/wizard/wizard.component';
 import { ProfileModalComponent } from './components/profile-modal/profile-modal.component';
 import { DailyRecapModalComponent } from './components/daily-recap-modal/daily-recap-modal.component';
 import { PanicModalComponent } from './components/panic-modal/panic-modal.component';
+import { FocusModalComponent } from './components/focus-modal/focus-modal.component';
 
 @Component({
   selector: 'app-root',
@@ -27,6 +28,7 @@ import { PanicModalComponent } from './components/panic-modal/panic-modal.compon
     ProfileModalComponent,
     DailyRecapModalComponent,
     PanicModalComponent,
+    FocusModalComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -55,6 +57,8 @@ export class App implements OnInit {
   readonly isPanicModalOpen = signal<boolean>(false);
   readonly isPanicProcessing = signal<boolean>(false);
   readonly breakingDownTaskId = signal<number | null>(null);
+  readonly focusingTask = signal<Task | null>(null);
+  readonly isBriefingLoading = signal<boolean>(false);
   readonly isCheckingProfile = signal<boolean>(true);
 
   /**
@@ -172,6 +176,47 @@ export class App implements OnInit {
 
   closePanicModal(): void {
     this.isPanicModalOpen.set(false);
+  }
+
+  playDailyBriefing(): void {
+    if (this.isBriefingLoading()) return;
+    this.isBriefingLoading.set(true);
+
+    this.apiService.getMorningBriefing().subscribe({
+      next: (briefing) => {
+        this.isBriefingLoading.set(false);
+        this.avatarVoiceReply.set(briefing.briefing_text);
+        this.avatarState.set('happy');
+
+        if (this.userProfile()) {
+          this.userProfile.update((p) => p ? { ...p, xp: briefing.xp, streak_days: briefing.streak_days } : p);
+        }
+
+        this.ttsService.speak(briefing.audio_script || briefing.briefing_text);
+        this.showToast('خلاصه صوتی روز در حال پخش است 🎙️✨');
+      },
+      error: (err) => {
+        this.isBriefingLoading.set(false);
+        console.warn('Failed to fetch morning briefing:', err);
+        this.showToast('خطا در دریافت خلاصه صوتی روز ⚠️');
+      }
+    });
+  }
+
+  openFocusModal(task: Task): void {
+    this.focusingTask.set(task);
+  }
+
+  closeFocusModal(): void {
+    this.focusingTask.set(null);
+  }
+
+  onFocusTaskCompleted(completedTask: Task): void {
+    this.tasks.update((list) =>
+      list.map((t) => (t.id === completedTask.id ? { ...t, is_completed: true } : t))
+    );
+    this.userProfile.update((p) => p ? { ...p, xp: (p.xp || 0) + 15 } : p);
+    this.showToast(`تسک «${completedTask.title}» با تمرکز عمیق انجام شد! +۱۵ XP 🎯⚡`);
   }
 
   onPanicConfirmed(reason: string): void {
@@ -444,6 +489,10 @@ export class App implements OnInit {
           this.avatarState.set('happy');
           this.avatarVoiceReply.set('آفرین! یک قدم به اهداف امروزت نزدیک‌تر شدی 🎉');
           this.ttsService.speak('آفرین! یک قدم به اهداف امروزت نزدیک‌تر شدی');
+          this.userProfile.update((p) => p ? { ...p, xp: (p.xp || 0) + 15 } : p);
+          this.showToast(`+۱۵ امتیاز XP برای تکمیل «${event.task.title}» دریافت کردی! ⚡`);
+        } else {
+          this.userProfile.update((p) => p ? { ...p, xp: Math.max(0, (p.xp || 0) - 15) } : p);
         }
       },
       error: (err) => {

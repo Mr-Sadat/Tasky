@@ -121,6 +121,46 @@ import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.compone
         </div>
       </div>
 
+      <!-- XP Progression & Streak Level Bar -->
+      <div class="mt-3.5 pt-3 border-t border-purple-500/20 relative select-none">
+        <div class="flex items-center justify-between text-xs mb-1.5 flex-wrap gap-1.5">
+          <div class="flex items-center gap-1.5">
+            <!-- Level Badge -->
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/40 font-black text-[11px] shadow-sm">
+              <span>⚡</span>
+              <span>سطح {{ getLevel() }}</span>
+            </span>
+            <!-- Daily Streak Badge -->
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 font-bold text-[11px] shadow-sm">
+              <span>🔥</span>
+              <span>{{ streakDays }} روز پیوسته</span>
+            </span>
+          </div>
+          <!-- XP Fraction Counter -->
+          <div class="text-[11px] font-mono text-purple-200 flex items-center gap-1">
+            <span class="font-bold text-amber-300">{{ getLevelProgress() }}/100 XP</span>
+            <span class="text-slate-400 text-[10px]">({{ xp }} امتیاز کل)</span>
+          </div>
+        </div>
+
+        <!-- Sleek Animated Gradient Progress Bar -->
+        <div class="w-full h-2 rounded-full bg-slate-950/80 border border-purple-500/30 overflow-hidden relative shadow-inner">
+          <div
+            class="h-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-amber-400 transition-all duration-700 ease-out shadow-sm shadow-purple-500/50"
+            [style.width.%]="getLevelProgress()"
+          ></div>
+        </div>
+
+        <!-- Floating +15 XP Badge when awarded -->
+        @if (showFloatingXp) {
+          <div class="absolute -top-3 left-3 animate-float-xp pointer-events-none z-30">
+            <span class="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/60 ring-2 ring-white/50">
+              +۱۵ XP ⚡✨
+            </span>
+          </div>
+        }
+      </div>
+
       <!-- Transcribed Text Pill (if available) -->
       @if (transcribedText) {
         <div class="mt-3 pt-3 border-t border-purple-500/10 flex items-start gap-2">
@@ -135,6 +175,27 @@ import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.compone
   styles: [`
     :host {
       display: block;
+    }
+    @keyframes float-xp {
+      0% {
+        opacity: 0;
+        transform: translateY(12px) scale(0.7);
+      }
+      20% {
+        opacity: 1;
+        transform: translateY(-4px) scale(1.15);
+      }
+      75% {
+        opacity: 1;
+        transform: translateY(-16px) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-28px) scale(0.9);
+      }
+    }
+    .animate-float-xp {
+      animation: float-xp 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     }
   `]
 })
@@ -151,8 +212,39 @@ export class AvatarCardComponent {
   @Input() nextTask?: Task | null;
   @Input() sleepTime: string = '23:00';
   @Input() wakeTime: string = '07:00';
+  @Input() streakDays: number = 0;
+
+  @Input() set xp(val: number) {
+    if (this._xp !== undefined && val > this._xp) {
+      this.triggerFloatingXp();
+    }
+    this._xp = val;
+  }
+  get xp(): number {
+    return this._xp || 0;
+  }
+  private _xp: number = 0;
+
+  showFloatingXp: boolean = false;
+  private xpTimeout: any = null;
 
   @Output() studioClick = new EventEmitter<void>();
+
+  triggerFloatingXp(): void {
+    this.showFloatingXp = true;
+    if (this.xpTimeout) clearTimeout(this.xpTimeout);
+    this.xpTimeout = setTimeout(() => {
+      this.showFloatingXp = false;
+    }, 2200);
+  }
+
+  getLevel(): number {
+    return Math.floor(this.xp / 100) + 1;
+  }
+
+  getLevelProgress(): number {
+    return this.xp % 100;
+  }
 
   get activeCustomization(): AvatarCustomization {
     return this.customization || this.themeService.customization();

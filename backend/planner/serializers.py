@@ -104,6 +104,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "sleep_time",
             "avatar_config",
             "ai_guidelines",
+            "xp",
+            "streak_days",
             "created_at",
             "updated_at",
         ]

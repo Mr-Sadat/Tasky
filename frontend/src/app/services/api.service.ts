@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Task, VoiceToPlanResponse, UserProfile, ProfileSetupPayload } from '../models/task.model';
+import { Task, VoiceToPlanResponse, UserProfile, ProfileSetupPayload, MorningBriefingResponse } from '../models/task.model';
 
 export interface PanicRescheduleResponse {
   avatar_reaction: {
@@ -29,7 +29,11 @@ export interface TaskBreakdownResponse {
 })
 export class ApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8000/api';
+  private readonly baseUrl = (typeof window !== 'undefined' && (window as any).__API_BASE_URL__)
+    ? (window as any).__API_BASE_URL__
+    : (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? 'http://localhost:8000/api'
+        : '/api');
 
   /**
    * Fetch tasks for today or a specific date.
@@ -139,5 +143,12 @@ export class ApiService {
    */
   updateProfile(changes: Partial<UserProfile>): Observable<UserProfile> {
     return this.http.put<UserProfile>(`${this.baseUrl}/profile/`, changes);
+  }
+
+  /**
+   * Fetch daily radio morning audio briefing script & stats.
+   */
+  getMorningBriefing(): Observable<MorningBriefingResponse> {
+    return this.http.get<MorningBriefingResponse>(`${this.baseUrl}/profile/morning-briefing/`);
   }
 }

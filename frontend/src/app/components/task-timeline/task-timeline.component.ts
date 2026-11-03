@@ -211,6 +211,16 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
               <!-- Right side: Quick Reschedule Micro-Actions + Breakdown + Delete -->
               <div class="flex items-center gap-1 flex-wrap">
                 @if (!task.is_completed) {
+                  <!-- Deep Focus / Pomodoro Button -->
+                  <button
+                    type="button"
+                    (click)="onStartFocus(task)"
+                    class="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white border border-purple-400/40 shadow-sm shadow-purple-950/50 transition cursor-pointer flex items-center gap-1 interactive-spring"
+                    title="شروع حالت تمرکز عمیق (پومودورو) برای این تسک"
+                  >
+                    <span>⏱️</span>
+                    <span>شروع تمرکز</span>
+                  </button>
                   <!-- +15m Button -->
                   <button
                     type="button"
@@ -294,6 +304,7 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
   @Output() openStoryRecap = new EventEmitter<void>();
   @Output() triggerPanic = new EventEmitter<void>();
   @Output() breakdownTask = new EventEmitter<Task>();
+  @Output() startFocus = new EventEmitter<Task>();
 
   private clockTimer: any = null;
   readonly nowMinutes = signal<number>(this.calculateNowMinutes());
@@ -343,6 +354,10 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
 
   uncompletedCount(): number {
     return this.tasks.filter(t => !t.is_completed).length;
+  }
+
+  onStartFocus(task: Task): void {
+    this.startFocus.emit(task);
   }
 
   onBreakdown(task: Task): void {

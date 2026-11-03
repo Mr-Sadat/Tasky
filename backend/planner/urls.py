@@ -8,6 +8,7 @@ from .views import (
     TextToSpeechView,
     PanicRescheduleView,
     TaskBreakdownView,
+    MorningBriefingView,
 )
 
 urlpatterns = [
@@ -18,5 +19,6 @@ urlpatterns = [
     path("tasks/<int:pk>/", TaskDetailView.as_view(), name="task_detail"),
     path("profile/", UserProfileView.as_view(), name="user_profile"),
     path("profile/setup/", ProfileSetupView.as_view(), name="profile_setup"),
+    path("profile/morning-briefing/", MorningBriefingView.as_view(), name="morning_briefing"),
     path("tts/", TextToSpeechView.as_view(), name="text_to_speech"),
 ]

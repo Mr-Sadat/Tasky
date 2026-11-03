@@ -845,3 +845,64 @@ class AIProfileContextInjectionTests(APITestCase):
         """Test breakdown on non-existent task returns 404."""
         response = self.client.post("/api/tasks/99999/breakdown/")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+    def test_patch_task_completion_awards_xp_and_streak(self):
+        """Test that completing a task awards +15 XP and calculates daily streak for high priority tasks."""
+        today = timezone.localdate()
+        profile = UserProfile.objects.create(name="تستگر", xp=10, streak_days=2)
+
+        # Create high priority task
+        task = Task.objects.create(
+            title="تسک مهم فوری",
+            scheduled_time="10:00",
+            duration_minutes=30,
+            priority="high",
+            date=today,
+            is_completed=False,
+        )
+
+        response = self.client.patch(
+            f"/api/tasks/{task.id}/",
+            {"is_completed": True},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        profile.refresh_from_db()
+        self.assertEqual(profile.xp, 25) # 10 + 15
+        self.assertEqual(profile.streak_days, 3) # Streak incremented
+
+        # Uncompleting deducts XP
+        res_uncheck = self.client.patch(
+            f"/api/tasks/{task.id}/",
+            {"is_completed": False},
+            format="json"
+        )
+        self.assertEqual(res_uncheck.status_code, status.HTTP_200_OK)
+        profile.refresh_from_db()
+        self.assertEqual(profile.xp, 10)
+
+    @patch.dict(os.environ, {"USE_MOCK_AI": "True"})
+    def test_morning_briefing_view_endpoint(self):
+        """Test GET /api/profile/morning-briefing/ in mock mode."""
+        today = timezone.localdate()
+        profile = UserProfile.objects.create(name="سارا", xp=45, streak_days=1)
+        Task.objects.create(
+            title="جلسه صبحگاهی",
+            scheduled_time="09:30",
+            duration_minutes=30,
+            priority="high",
+            date=today,
+        )
+
+        response = self.client.get("/api/profile/morning-briefing/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+
+        self.assertIn("briefing_text", data)
+        self.assertIn("audio_script", data)
+        self.assertIn("سارا", data["briefing_text"])
+        self.assertEqual(data["tasks_count"], 1)
+        self.assertEqual(data["xp"], 45)
+        self.assertEqual(data["streak_days"], 1)

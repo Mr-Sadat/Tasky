@@ -28,6 +28,23 @@
 
         <!-- Header Actions: Panic Button, Profile, Notifications & Date Pill -->
         <div class="flex items-center gap-1.5 sm:gap-2">
+          <!-- Daily Audio Briefing Button -->
+          <button
+            type="button"
+            (click)="playDailyBriefing()"
+            [disabled]="isBriefingLoading()"
+            class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-indigo-500/20 border border-amber-400/40 text-amber-200 text-xs hover:border-amber-400 hover:bg-amber-500/30 interactive-spring cursor-pointer shadow-sm shadow-amber-950/40 select-none transition disabled:opacity-50"
+            title="پخش خلاصه صوتی رادیویی روز توسط آواتار (🎙️)"
+            aria-label="خلاصه صوتی روز"
+          >
+            @if (isBriefingLoading()) {
+              <span class="w-3 h-3 border-2 border-amber-300/30 border-t-amber-300 rounded-full animate-spin"></span>
+            } @else {
+              <span class="text-xs" [class.animate-pulse]="ttsService.isSpeaking()">🎙️</span>
+            }
+            <span class="text-[11px] font-bold hidden sm:inline">خلاصه صوتی روز</span>
+            <span class="text-[11px] font-bold sm:hidden">خلاصه روز</span>
+          </button>
           <!-- Panic Button Header Quick Action -->
           @if (uncompletedCount() > 0) {
             <button
@@ -150,11 +167,14 @@
           [nextTask]="nextTask()"
           [sleepTime]="userProfile()?.sleep_time || '23:00'"
           [wakeTime]="userProfile()?.wake_time || '07:00'"
+          [xp]="userProfile()?.xp || 0"
+          [streakDays]="userProfile()?.streak_days || 0"
           (studioClick)="themeService.openStudio()"
         ></app-avatar-card>
 
         <!-- Task Timeline with Panic Trigger & Breakdown Actions -->
         <app-task-timeline
+              (startFocus)="openFocusModal($event)"
           [tasks]="tasks()"
           [selectedDate]="selectedDate()"
           [dateTabs]="dateTabs()"
@@ -207,6 +227,16 @@
       }
 
       <!-- Aesthetic Daily Story / Recap Modal -->
+      <!-- Deep Focus / Pomodoro Modal -->
+      @if (focusingTask()) {
+        <app-focus-modal
+          [task]="focusingTask()!"
+          [avatarCustomization]="themeService.customization()"
+          (close)="closeFocusModal()"
+          (completed)="onFocusTaskCompleted($event)"
+        ></app-focus-modal>
+      }
+
       @if (isStoryModalOpen()) {
         <app-daily-recap-modal
           [tasks]="tasks()"

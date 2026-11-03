@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
-from .models import Task, VoiceLog, UserProfile
+from .models import Task, VoiceLog, UserProfile, PriorityChoices
 from .serializers import (
     TaskSerializer,
     VoiceLogSerializer,
@@ -26,6 +26,7 @@ from .ai_service import (
     process_panic_reschedule,
     process_task_breakdown,
     normalize_time_str,
+    generate_morning_briefing,
 )
 
 logger = logging.getLogger(__name__)
@@ -409,9 +410,31 @@ class TaskDetailView(APIView):
         task = self.get_object(pk)
         if not task:
             return Response({"error": "تسک یافت نشد."}, status=status.HTTP_404_NOT_FOUND)
+
+        was_completed = task.is_completed
         serializer = TaskSerializer(task, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
+            updated_task = serializer.save()
+
+            # Award +15 XP and compute streak if completion changed
+            if "is_completed" in request.data:
+                now_completed = updated_task.is_completed
+                profile = UserProfile.objects.first()
+                if profile:
+                    if not was_completed and now_completed:
+                        profile.xp += 15
+                        # Calculate daily streak if all high-priority tasks for today are completed
+                        today = timezone.localdate()
+                        high_prio_today = Task.objects.filter(date=today, priority=PriorityChoices.HIGH)
+                        if high_prio_today.exists() and not high_prio_today.filter(is_completed=False).exists():
+                            if profile.last_streak_date != today:
+                                profile.streak_days += 1
+                                profile.last_streak_date = today
+                        profile.save()
+                    elif was_completed and not now_completed:
+                        profile.xp = max(0, profile.xp - 15)
+                        profile.save()
+
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -672,3 +695,30 @@ class TaskBreakdownView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class MorningBriefingView(APIView):
+    """
+    GET /api/profile/morning-briefing/:
+    Aggregates today's scheduled tasks and user name.
+    Composes a warm, energetic 2-3 sentence Persian radio-style morning summary.
+    """
+    def get(self, request, *args, **kwargs):
+        profile = UserProfile.objects.first()
+        user_name = profile.name if profile and profile.name else "دوست من"
+        today = timezone.localdate()
+
+        tasks = Task.objects.filter(date=today).order_by("scheduled_time")
+        tasks_data = TaskSerializer(tasks, many=True).data
+
+        briefing = generate_morning_briefing(
+            user_name=user_name,
+            tasks=tasks_data,
+            date_str=today.isoformat(),
+            profile=profile,
+        )
+
+        briefing["xp"] = profile.xp if profile else 0
+        briefing["streak_days"] = profile.streak_days if profile else 0
+
+        return Response(briefing, status=status.HTTP_200_OK)
