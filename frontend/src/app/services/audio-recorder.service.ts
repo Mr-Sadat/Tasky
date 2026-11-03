@@ -3,6 +3,7 @@ import { Injectable, signal } from '@angular/core';
 export interface RecordedAudioResult {
   blob: Blob;
   durationSeconds: number;
+  transcript?: string;
 }
 
 @Injectable({
@@ -13,29 +14,35 @@ export class AudioRecorderService {
   private audioChunks: Blob[] = [];
   private stream: MediaStream | null = null;
   private timerInterval: any = null;
+  private recognition: any = null;
 
   readonly isRecording = signal<boolean>(false);
   readonly durationSeconds = signal<number>(0);
   readonly recordingError = signal<string | null>(null);
+  readonly recognizedText = signal<string>('');
 
   /**
    * Check if audio recording is supported in the current browser.
    */
   isSupported(): boolean {
     return !!(
+      typeof navigator !== 'undefined' &&
       navigator.mediaDevices &&
       typeof navigator.mediaDevices.getUserMedia === 'function' &&
-      typeof window.MediaRecorder !== 'undefined'
+      typeof window !== 'undefined' &&
+      typeof (window as any).MediaRecorder !== 'undefined'
     );
   }
 
   /**
    * Request microphone permission and start recording.
+   * Also starts Persian Web Speech Recognition if supported.
    */
   async startRecording(): Promise<void> {
     this.recordingError.set(null);
     this.audioChunks = [];
     this.durationSeconds.set(0);
+    this.recognizedText.set('');
 
     if (!this.isSupported()) {
       this.recordingError.set('ضبط صدا در مرورگر شما پشتیبانی نمی‌شود.');
@@ -72,8 +79,41 @@ export class AudioRecorderService {
         }
       };
 
-      this.mediaRecorder.start(250); // Slice chunks every 250ms
+      this.mediaRecorder.start(250);
       this.isRecording.set(true);
+
+      // Start Web Speech Recognition if available (Chrome, Edge, Android)
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          this.recognition = new SpeechRecognition();
+          this.recognition.lang = 'fa-IR';
+          this.recognition.continuous = true;
+          this.recognition.interimResults = true;
+          let fullTranscript = '';
+
+          this.recognition.onresult = (event: any) => {
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                fullTranscript += event.results[i][0].transcript + ' ';
+              } else {
+                interim += event.results[i][0].transcript;
+              }
+            }
+            const current = (fullTranscript + interim).trim();
+            this.recognizedText.set(current);
+          };
+
+          this.recognition.onerror = (e: any) => {
+            console.info('Speech recognition note:', e?.error);
+          };
+
+          this.recognition.start();
+        } catch (e) {
+          console.info('Speech recognition start note:', e);
+        }
+      }
 
       // Start elapsed timer
       this.timerInterval = setInterval(() => {
@@ -89,7 +129,7 @@ export class AudioRecorderService {
   }
 
   /**
-   * Stop recording and return the accumulated audio Blob.
+   * Stop recording and return the accumulated audio Blob and transcript.
    */
   stopRecording(): Promise<RecordedAudioResult> {
     return new Promise((resolve, reject) => {
@@ -101,40 +141,58 @@ export class AudioRecorderService {
         return;
       }
 
+      if (this.recognition) {
+        try {
+          this.recognition.stop();
+        } catch (e) {}
+      }
+
+      const elapsed = this.durationSeconds();
+
       this.mediaRecorder.onstop = () => {
         const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
-        const audioBlob = new Blob(this.audioChunks, { type: mimeType });
-        const finalDuration = this.durationSeconds();
-
+        const blob = new Blob(this.audioChunks, { type: mimeType });
         this.stopMediaTracks();
         this.isRecording.set(false);
         if (this.timerInterval) clearInterval(this.timerInterval);
 
         resolve({
-          blob: audioBlob,
-          durationSeconds: finalDuration
+          blob,
+          durationSeconds: elapsed,
+          transcript: this.recognizedText()
         });
       };
 
-      this.mediaRecorder.stop();
+      try {
+        this.mediaRecorder.stop();
+      } catch (err) {
+        this.stopMediaTracks();
+        this.isRecording.set(false);
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        reject(err);
+      }
     });
   }
 
   /**
-   * Cancel ongoing recording and release microphone.
+   * Cancel the current recording and discard captured data.
    */
   cancelRecording(): void {
+    if (this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch (e) {}
+    }
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       try {
         this.mediaRecorder.stop();
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     }
     this.stopMediaTracks();
-    this.audioChunks = [];
     this.isRecording.set(false);
+    this.audioChunks = [];
     this.durationSeconds.set(0);
+    this.recognizedText.set('');
     if (this.timerInterval) clearInterval(this.timerInterval);
   }
 

@@ -144,7 +144,9 @@ export class VoiceInputComponent {
     try {
       const result = await this.recorder.stopRecording();
       this.recordingStateChange.emit(false);
-      if (result.blob && result.blob.size > 0) {
+      if (result.transcript && result.transcript.trim()) {
+        this.submitText.emit(result.transcript.trim());
+      } else if (result.blob && result.blob.size > 0) {
         this.submitAudio.emit(result.blob);
       }
     } catch (err) {
