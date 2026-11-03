@@ -19,6 +19,7 @@ import {
   SpecialOccasion
 } from '../../models/task.model';
 import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.component';
+import { JalaliDatePickerModalComponent } from '../jalali-date-picker/jalali-date-picker-modal.component';
 
 export interface PsychQuestion {
   id: string;
@@ -31,7 +32,7 @@ export interface PsychQuestion {
 @Component({
   selector: 'app-wizard',
   standalone: true,
-  imports: [CommonModule, FormsModule, DynamicAvatarComponent],
+  imports: [CommonModule, FormsModule, DynamicAvatarComponent, JalaliDatePickerModalComponent],
   template: `
     <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-3 sm:p-4 selection:bg-purple-600 selection:text-white relative overflow-hidden" dir="rtl">
       <!-- Ambient Glow Orbs -->
@@ -204,12 +205,22 @@ export interface PsychQuestion {
                     />
                   </div>
                   <div>
-                    <input
-                      type="text"
-                      [(ngModel)]="newOccasionDate"
-                      placeholder="تاریخ شمسی (مثلاً: 08-15)"
-                      class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs text-center outline-none focus:border-pink-500 font-mono"
-                    />
+                    <div class="flex items-center gap-1">
+                      <input
+                        type="text"
+                        [(ngModel)]="newOccasionDate"
+                        placeholder="تاریخ شمسی (مثلاً: 08-15)"
+                        class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs text-center outline-none focus:border-pink-500 font-mono"
+                      />
+                      <button
+                        type="button"
+                        (click)="isDatePickerOpen = true"
+                        class="shrink-0 p-2 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/30 text-purple-200 transition cursor-pointer text-xs"
+                        title="انتخاب از تقویم شمسی 📅"
+                      >
+                        📅
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -477,6 +488,15 @@ export interface PsychQuestion {
           </p>
         </div>
       }
+
+      <!-- Jalali Date Picker Modal in Wizard -->
+      @if (isDatePickerOpen) {
+        <app-jalali-date-picker-modal
+          [initialDateStr]="newOccasionDate"
+          (dateSelected)="newOccasionDate = $event; isDatePickerOpen = false"
+          (close)="isDatePickerOpen = false"
+        ></app-jalali-date-picker-modal>
+      }
     </div>
   `
 })
@@ -514,6 +534,7 @@ export class WizardComponent {
   ];
   newOccasionTitle: string = '';
   newOccasionDate: string = '';
+  isDatePickerOpen: boolean = false;
 
   // Step 4: Catchphrases
   readonly presetCatchphrases = [

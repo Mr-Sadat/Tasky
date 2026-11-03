@@ -62,7 +62,7 @@ export class ApiService {
   // Storage Helpers
   // ==========================================
 
-  private getStoredTasks(): Task[] {
+  getStoredTasks(): Task[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.TASKS);
       if (data) {
@@ -82,7 +82,7 @@ export class ApiService {
     }
   }
 
-  private getStoredProfile(): UserProfile | null {
+  getStoredProfile(): UserProfile | null {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PROFILE);
       if (data) {
@@ -217,6 +217,21 @@ export class ApiService {
     const todayIso = getTodayIso();
     const targetDate = (date && date !== 'today' && date !== 'all') ? date : todayIso;
 
+    // Normalize any legacy tasks with date: 'today' to actual todayIso
+    let needsSave = false;
+    for (const t of allTasks) {
+      if (t.date === 'today' || !t.date) {
+        t.date = todayIso;
+        t.jalali_date = getJalaliDateStr(todayIso);
+        t.jalali_display = getJalaliDisplayStr(todayIso);
+        t.jalali_day_name = getJalaliDayNameStr(todayIso);
+        needsSave = true;
+      }
+    }
+    if (needsSave) {
+      this.saveStoredTasks(allTasks);
+    }
+
     // Check and inject any today or tomorrow occasions into tasks
     this.syncOccasionsIntoTasks(targetDate, allTasks);
 
@@ -227,7 +242,7 @@ export class ApiService {
       filtered = allTasks.filter((t) => t.date === date);
     } else {
       // Default to today
-      filtered = allTasks.filter((t) => t.date === todayIso || !t.date);
+      filtered = allTasks.filter((t) => t.date === todayIso || t.date === 'today' || !t.date);
     }
 
     filtered.sort((a, b) => (a.scheduled_time || '12:00').localeCompare(b.scheduled_time || '12:00'));
@@ -362,12 +377,87 @@ export class ApiService {
   }
 
   // ==========================================
+
+  createTask(taskData: Partial<Task>): Observable<Task> {
+    const tasks = this.getStoredTasks();
+    const targetDate = (taskData.date && taskData.date !== 'today') ? taskData.date : getTodayIso();
+    const newTask: Task = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      title: taskData.title?.trim() || 'کار جدید',
+      scheduled_time: taskData.scheduled_time || '10:00',
+      duration_minutes: taskData.duration_minutes || 30,
+      priority: taskData.priority || 'medium',
+      category: taskData.category || 'personal',
+      icon: taskData.icon || 'star',
+      notification_text: taskData.notification_text || `زمان انجام ${taskData.title || 'کار'} رسیده است ✨`,
+      is_completed: false,
+      date: targetDate,
+      jalali_date: getJalaliDateStr(targetDate),
+      jalali_display: getJalaliDisplayStr(targetDate),
+      jalali_day_name: getJalaliDayNameStr(targetDate),
+      created_at: new Date().toISOString(),
+    };
+    tasks.push(newTask);
+    this.saveStoredTasks(tasks);
+    return of(newTask).pipe(delay(50));
+  }
+
+  addOccasion(occasion: SpecialOccasion): Observable<UserProfile> {
+    const profile = this.getStoredProfile() || {
+      name: 'کاربر',
+      wake_time: '07:00',
+      sleep_time: '23:00',
+      avatar_config: {
+        faceShape: 'oval',
+        skinTone: '#f6d2b5',
+        hairStyle: 'medium_wavy',
+        hairColor: '#18181b',
+        eyeShape: 'almond',
+        eyeColor: '#292524',
+        eyebrows: 'arched',
+        mouthExpression: 'gentle_smile',
+        lipColor: '#fb7185',
+        outfitStyle: 'hoodie',
+        outfitColor: '#8b5cf6',
+        accessory: 'glasses',
+        themeColor: 'purple',
+      },
+      ai_guidelines: '',
+    };
+    const existing = Array.isArray(profile.occasions) ? profile.occasions : [];
+    profile.occasions = [...existing, occasion];
+    this.saveStoredProfile(profile);
+    this.syncOccasions();
+    return of(profile).pipe(delay(50));
+  }
+
+  deleteOccasion(occasionId: string): Observable<UserProfile | null> {
+    const profile = this.getStoredProfile();
+    if (profile && Array.isArray(profile.occasions)) {
+      profile.occasions = profile.occasions.filter((o) => o.id !== occasionId);
+      this.saveStoredProfile(profile);
+    }
+    return of(profile).pipe(delay(50));
+  }
+
   // Client-Side AI Voice-To-Plan Engine
   // ==========================================
 
   voiceToPlan(audioBlob?: Blob | null, text?: string, date?: string): Observable<VoiceToPlanResponse> {
-    const targetDate = date || getTodayIso();
+    let targetDate = (date && date !== 'today' && date !== 'all') ? date : getTodayIso();
     const rawText = (text && text.trim()) ? text.trim() : (audioBlob ? 'یادداشت صوتی جدید برای برنامه' : 'برنامه جدید');
+
+    // Intelligent relative Persian day resolution
+    const textLower = rawText.toLowerCase();
+    if (textLower.includes('پس‌فردا') || textLower.includes('پس فردا')) {
+      const d = new Date();
+      d.setDate(d.getDate() + 2);
+      targetDate = d.toISOString().split('T')[0];
+    } else if (textLower.includes('فردا')) {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      targetDate = d.toISOString().split('T')[0];
+    }
 
     const profile = this.getStoredProfile();
     const catchphrase = this.getRandomCatchphrase(profile);

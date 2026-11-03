@@ -14,6 +14,8 @@ import { ProfileModalComponent } from './components/profile-modal/profile-modal.
 import { DailyRecapModalComponent } from './components/daily-recap-modal/daily-recap-modal.component';
 import { PanicModalComponent } from './components/panic-modal/panic-modal.component';
 import { FocusModalComponent } from './components/focus-modal/focus-modal.component';
+import { CalendarModalComponent } from './components/calendar-modal/calendar-modal.component';
+import { getJalaliDisplayStr } from './utils/jalali';
 
 @Component({
   selector: 'app-root',
@@ -29,6 +31,7 @@ import { FocusModalComponent } from './components/focus-modal/focus-modal.compon
     DailyRecapModalComponent,
     PanicModalComponent,
     FocusModalComponent,
+    CalendarModalComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -60,6 +63,7 @@ export class App implements OnInit {
   readonly focusingTask = signal<Task | null>(null);
   readonly isBriefingLoading = signal<boolean>(false);
   readonly isCheckingProfile = signal<boolean>(true);
+  readonly isCalendarModalOpen = signal<boolean>(false);
 
   /**
    * Computed: count of uncompleted tasks for today
@@ -168,6 +172,23 @@ export class App implements OnInit {
 
   closeStoryModal(): void {
     this.isStoryModalOpen.set(false);
+  }
+
+  
+  openCalendarModal(): void {
+    this.isCalendarModalOpen.set(true);
+  }
+
+  closeCalendarModal(): void {
+    this.isCalendarModalOpen.set(false);
+  }
+
+  onCalendarDateSelected(isoDate: string): void {
+    const todayIso = new Date().toISOString().split('T')[0];
+    this.selectedDate.set(isoDate === todayIso ? 'today' : isoDate);
+    this.loadTasks(this.selectedDate());
+    this.isCalendarModalOpen.set(false);
+    this.showToast(`تقویم به روز ${getJalaliDisplayStr(isoDate)} منتقل شد 📅`);
   }
 
   openPanicModal(): void {
@@ -416,7 +437,7 @@ export class App implements OnInit {
     this.avatarState.set('thinking');
     this.errorMessage.set(null);
 
-    const targetDate = this.selectedDate() === 'all' ? undefined : this.selectedDate();
+    const targetDate = (this.selectedDate() === 'all' || this.selectedDate() === 'today') ? undefined : this.selectedDate();
     this.apiService.voiceToPlan(audioBlob, undefined, targetDate).subscribe({
       next: (res: VoiceToPlanResponse) => {
         this.handlePlanResponse(res);
@@ -435,7 +456,7 @@ export class App implements OnInit {
     this.avatarState.set('thinking');
     this.errorMessage.set(null);
 
-    const targetDate = this.selectedDate() === 'all' ? undefined : this.selectedDate();
+    const targetDate = (this.selectedDate() === 'all' || this.selectedDate() === 'today') ? undefined : this.selectedDate();
     this.apiService.voiceToPlan(null, text, targetDate).subscribe({
       next: (res: VoiceToPlanResponse) => {
         this.handlePlanResponse(res);
@@ -470,10 +491,15 @@ export class App implements OnInit {
 
     // 3. Add new tasks and reschedule notifications
     if (res.tasks && res.tasks.length > 0) {
-      this.loadTasks();
-      this.showToast('برنامه روزانه با موفقیت تنظیم شد ✨');
+      const createdTask = res.tasks[0];
+      const todayIso = new Date().toISOString().split('T')[0];
+      if (createdTask.date) {
+        this.selectedDate.set(createdTask.date === todayIso ? 'today' : createdTask.date);
+      }
+      this.loadTasks(this.selectedDate());
+      this.showToast('برنامه روزانه با موفقیت تنظیم و ثبت شد ✨');
     } else {
-      this.loadTasks();
+      this.loadTasks(this.selectedDate());
     }
   }
 

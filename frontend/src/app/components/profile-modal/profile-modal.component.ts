@@ -34,6 +34,7 @@ import {
   SpecialOccasion,
 } from '../../models/task.model';
 import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.component';
+import { JalaliDatePickerModalComponent } from '../jalali-date-picker/jalali-date-picker-modal.component';
 
 type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories';
 type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'avatar';
@@ -41,7 +42,7 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
 @Component({
   selector: 'app-profile-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, DynamicAvatarComponent],
+  imports: [CommonModule, FormsModule, DynamicAvatarComponent, JalaliDatePickerModalComponent],
   template: `
     <dialog
       #profileDialog
@@ -213,12 +214,22 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
                   placeholder="عنوان (مثلاً: تولد همسرم، سالگرد ازدواج)"
                   class="sm:col-span-6 px-3 py-2 rounded-xl bg-slate-950/80 border border-white/10 text-white text-xs outline-none focus:border-purple-500"
                 />
-                <input
-                  type="text"
-                  [(ngModel)]="newOccasionDate"
-                  placeholder="تاریخ (مثلاً 08-25 یا 1403/08/25)"
-                  class="sm:col-span-4 px-3 py-2 rounded-xl bg-slate-950/80 border border-white/10 text-white text-xs outline-none focus:border-purple-500 text-center"
-                />
+                <div class="sm:col-span-4 flex items-center gap-1">
+                  <input
+                    type="text"
+                    [(ngModel)]="newOccasionDate"
+                    placeholder="تاریخ (مثلاً 08-25)"
+                    class="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-white/10 text-white text-xs outline-none focus:border-purple-500 text-center font-mono"
+                  />
+                  <button
+                    type="button"
+                    (click)="isDatePickerOpen = true"
+                    class="shrink-0 p-2 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/30 text-purple-200 transition cursor-pointer text-xs"
+                    title="انتخاب از تقویم شمسی 📅"
+                  >
+                    📅
+                  </button>
+                </div>
                 <button
                   type="button"
                   (click)="addOccasion()"
@@ -780,6 +791,14 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
           </div>
         }
       </div>
+      <!-- Jalali Date Picker Sub-Modal -->
+      @if (isDatePickerOpen) {
+        <app-jalali-date-picker-modal
+          [initialDateStr]="newOccasionDate"
+          (dateSelected)="onDatePicked($event)"
+          (close)="isDatePickerOpen = false"
+        ></app-jalali-date-picker-modal>
+      }
     </dialog>
   `,
   styles: [`
@@ -812,6 +831,7 @@ export class ProfileModalComponent implements OnInit, OnDestroy {
   editAvatarConfig: AvatarCustomization = { ...DEFAULT_AVATAR_CUSTOMIZATION };
 
   // Occasions state
+  isDatePickerOpen: boolean = false;
   editOccasions: SpecialOccasion[] = [];
   newOccasionTitle: string = '';
   newOccasionDate: string = '';
@@ -882,6 +902,11 @@ export class ProfileModalComponent implements OnInit, OnDestroy {
     if (dialog && !dialog.open) {
       dialog.showModal();
     }
+  }
+
+  onDatePicked(dateStr: string): void {
+    this.newOccasionDate = dateStr;
+    this.isDatePickerOpen = false;
   }
 
   addOccasion(): void {

@@ -9,6 +9,10 @@ export const PERSIAN_WEEKDAYS = [
   'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه', 'شنبه'
 ];
 
+export const PERSIAN_WEEKDAYS_SHORT = [
+  'ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'
+];
+
 /**
  * Converts Gregorian date (year, month 1-12, day 1-31) to Jalali [jy, jm, jd]
  */
@@ -60,6 +64,37 @@ export function jalaliToGregorian(jy: number, jm: number, jd: number): [number, 
 }
 
 /**
+ * Converts Jalali date [jy, jm, jd] to Gregorian ISO string "YYYY-MM-DD"
+ */
+export function jalaliToIso(jy: number, jm: number, jd: number): string {
+  const [gy, gm, gd] = jalaliToGregorian(jy, jm, jd);
+  return `${gy}-${String(gm).padStart(2, '0')}-${String(gd).padStart(2, '0')}`;
+}
+
+/**
+ * Returns number of days in a given Jalali month (1-12)
+ */
+export function getJalaliMonthLength(jy: number, jm: number): number {
+  if (jm >= 1 && jm <= 6) return 31;
+  if (jm >= 7 && jm <= 11) return 30;
+  // Month 12 (Esfand): Check leap year
+  const [gy, gm, gd] = jalaliToGregorian(jy, 12, 30);
+  const [backY, backM, backD] = gregorianToJalali(gy, gm, gd);
+  return (backY === jy && backM === 12 && backD === 30) ? 30 : 29;
+}
+
+/**
+ * Returns Persian weekday index for the 1st of a Jalali month (0 = Shanbeh, 6 = Jomeh)
+ */
+export function getJalaliMonthStartWeekday(jy: number, jm: number): number {
+  const [gy, gm, gd] = jalaliToGregorian(jy, jm, 1);
+  const d = new Date(gy, gm - 1, gd);
+  // In JS: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  // In Persian: 0=Sat (Shanbeh), 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri
+  return (d.getDay() + 1) % 7;
+}
+
+/**
  * Returns formatted Jalali date string e.g. "1405-08-12" from Date object or ISO string
  */
 export function getJalaliDateStr(dateInput?: Date | string): string {
@@ -95,4 +130,12 @@ export function getTodayIso(): string {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Returns current Jalali date [jy, jm, jd]
+ */
+export function getTodayJalali(): [number, number, number] {
+  const d = new Date();
+  return gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }

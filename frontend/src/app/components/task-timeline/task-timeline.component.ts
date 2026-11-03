@@ -64,6 +64,16 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
             }
           </button>
         }
+          <!-- Full Monthly Calendar Button -->
+        <button
+          type="button"
+          (click)="openCalendar.emit()"
+          class="shrink-0 flex flex-col items-center justify-center px-3.5 py-2 rounded-2xl border border-purple-500/30 bg-purple-950/40 hover:bg-purple-900/60 text-purple-200 hover:text-white text-xs transition cursor-pointer min-w-[75px]"
+          title="مشاهده تقویم کامل ماهانه و ثبت مناسبت‌ها"
+        >
+          <span class="text-xs">🗓️</span>
+          <span class="text-[10px] font-bold mt-0.5">تقویم ماه</span>
+        </button>
       </div>
 
       <!-- Empty State -->
@@ -303,6 +313,7 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
   @Output() rescheduleTask = new EventEmitter<{ task: Task; minutesToAdd?: number; toTomorrow?: boolean }>();
   @Output() openStoryRecap = new EventEmitter<void>();
   @Output() triggerPanic = new EventEmitter<void>();
+  @Output() openCalendar = new EventEmitter<void>();
   @Output() breakdownTask = new EventEmitter<Task>();
   @Output() startFocus = new EventEmitter<Task>();
 
