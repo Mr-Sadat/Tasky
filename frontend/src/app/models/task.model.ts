@@ -74,7 +74,6 @@ export type AvatarAccessory =
   | 'wizard_star';
 
 export interface AvatarCustomization {
-  // Modular Instagram Avatar features
   faceShape: FaceShape;
   skinTone: string;
   hairStyle: HairStyle;
@@ -87,10 +86,17 @@ export interface AvatarCustomization {
   outfitStyle: OutfitStyle;
   outfitColor: string;
   accessory: AvatarAccessory;
-
-  // Theme & legacy compatibility
   baseType?: AvatarBaseType;
   themeColor?: ThemeColor;
+}
+
+export interface SpecialOccasion {
+  id: string;
+  title: string;
+  date: string; // ISO (YYYY-MM-DD) or Jalali date (YYYY-MM-DD or MM-DD)
+  type: 'personal' | 'official';
+  icon?: string;
+  description?: string;
 }
 
 export interface UserProfile {
@@ -100,6 +106,9 @@ export interface UserProfile {
   sleep_time: string;
   avatar_config: AvatarCustomization;
   ai_guidelines: string;
+  catchphrases?: string[];
+  occasions?: SpecialOccasion[];
+  psychology_profile?: { [key: string]: any };
   xp?: number;
   streak_days?: number;
   created_at?: string;
@@ -111,15 +120,23 @@ export interface ProfileSetupPayload {
   wake_time: string;
   sleep_time: string;
   avatar_config: AvatarCustomization;
+  catchphrases?: string[];
+  occasions?: SpecialOccasion[];
   lifestyle_answers: {
     mainGoal?: string;
     stressLevel?: string;
     aiTone?: string;
+    chronotype?: string;
+    planningStyle?: string;
+    motivationDriver?: string;
+    procrastinationStyle?: string;
+    focusSpan?: string;
+    workLifeBoundary?: string;
+    resilienceStyle?: string;
+    notificationPreference?: string;
     [key: string]: any;
   };
 }
-
-
 
 export interface MorningBriefingResponse {
   briefing_text: string;

@@ -56,7 +56,7 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
             class="shrink-0 flex flex-col items-center justify-center px-3.5 py-2 rounded-2xl border text-xs transition-all duration-200 cursor-pointer min-w-[70px]"
             [ngClass]="selectedDate === tab.dateValue
               ? 'bg-gradient-to-b from-purple-600 to-indigo-600 text-white border-purple-400/50 shadow-md shadow-purple-900/30 font-bold scale-[1.02]'
-              : 'bg-slate-900/70 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60'"
+              : 'bg-slate-900/60 backdrop-blur-md border border-white/10 text-slate-300 hover:border-purple-500/40 hover:bg-white/5'"
           >
             <span class="text-[11px] font-semibold">{{ tab.label }}</span>
             @if (tab.subLabel) {
@@ -68,7 +68,7 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
 
       <!-- Empty State -->
       @if (tasks.length === 0) {
-        <div class="text-center py-12 px-4 rounded-3xl bg-slate-800/40 border border-dashed border-slate-700/60 backdrop-blur-sm">
+        <div class="text-center py-12 px-4 rounded-3xl bg-slate-900/40 border border-dashed border-white/15 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
           <div class="text-5xl mb-3 select-none">🗓️</div>
           <h3 class="text-sm font-bold text-slate-200 mb-1">هنوز برنامه‌ای برای این تاریخ نداری!</h3>
           <p class="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
@@ -89,7 +89,7 @@ import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.m
                 ? 'bg-slate-900/60 border-slate-800/80 opacity-60 scale-[0.99]' 
                 : isActive
                   ? 'ring-2 ring-purple-400/90 shadow-xl shadow-purple-900/40 bg-gradient-to-r from-purple-950/80 via-slate-850 to-indigo-950/80 border-purple-500/50 scale-[1.01]'
-                  : 'bg-slate-800/80 border-slate-700/70 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-950/20 interactive-spring'
+                  : 'bg-slate-900/65 backdrop-blur-xl border border-white/10 hover:border-purple-500/40 hover:bg-slate-900/85 shadow-[0_8px_32px_rgba(0,0,0,0.37),inset_0_1px_1px_rgba(255,255,255,0.08)] interactive-spring'
             ]"
           >
             <!-- Vertical decorative time accent line -->

@@ -1,4 +1,4 @@
-import { Component, Input, computed } from '@angular/core';
+import { Component, Input, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   AvatarCustomization,
@@ -631,7 +631,15 @@ import { DEFAULT_AVATAR_CUSTOMIZATION, sanitizeAvatarConfig } from '../../servic
   `],
 })
 export class DynamicAvatarComponent {
-  @Input() customization: AvatarCustomization | null = null;
+  private readonly _customization = signal<AvatarCustomization>(DEFAULT_AVATAR_CUSTOMIZATION);
+
+  @Input() set customization(val: AvatarCustomization | null | undefined) {
+    this._customization.set(sanitizeAvatarConfig(val || DEFAULT_AVATAR_CUSTOMIZATION));
+  }
+  get customization(): AvatarCustomization {
+    return this._customization();
+  }
+
   @Input() state: AvatarState = 'idle';
   @Input() costume: 'default' | 'sleeping' | 'fitness' | 'study' | 'coffee' = 'default';
   @Input() isSpeaking: boolean = false;
@@ -640,7 +648,7 @@ export class DynamicAvatarComponent {
   readonly uniqueId = Math.random().toString(36).substring(2, 8);
 
   readonly config = computed<AvatarCustomization>(() => {
-    return sanitizeAvatarConfig(this.customization || DEFAULT_AVATAR_CUSTOMIZATION);
+    return this._customization();
   });
 
   getDarkerShade(hex: string, percent: number): string {

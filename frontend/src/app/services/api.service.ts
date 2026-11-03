@@ -10,7 +10,8 @@ import {
   TaskPriority,
   TaskCategory,
   TaskIcon,
-  AvatarMood
+  AvatarMood,
+  SpecialOccasion
 } from '../models/task.model';
 import {
   getTodayIso,
@@ -19,6 +20,7 @@ import {
   getJalaliDayNameStr,
   gregorianToJalali
 } from '../utils/jalali';
+import { findOccasionsForTimeline } from '../utils/occasions';
 
 export interface PanicRescheduleResponse {
   avatar_reaction: {
@@ -100,6 +102,15 @@ export class ApiService {
     }
   }
 
+  private getRandomCatchphrase(profile?: UserProfile | null): string {
+    const list = profile?.catchphrases?.filter((p) => p && p.trim()) || [];
+    if (list.length > 0) {
+      return list[Math.floor(Math.random() * list.length)];
+    }
+    const defaults = ['بزن بریم', 'دمت گرم', 'عالیجناب', 'حرکت کنیم', 'پرانرژی باش'];
+    return defaults[Math.floor(Math.random() * defaults.length)];
+  }
+
   private initializeDefaultData(): void {
     const isInit = localStorage.getItem(STORAGE_KEYS.INITIALIZED);
     if (!isInit) {
@@ -169,7 +180,11 @@ export class ApiService {
           sleep_time: '23:30',
           xp: 45,
           streak_days: 2,
-          ai_guidelines: '۱. برنامه‌ریزی واقع‌بینانه با فاصله‌های استراحت کوتاه.\n۲. اولویت‌بندی کارهای متمرکز در ساعات اوج انرژی صبحگاهی.\n۳. لحن مثبت، پرانرژی و حمایت‌گرانه.',
+          catchphrases: ['دمت گرم', 'بزن بریم', 'حرکت کنیم'],
+          occasions: [
+            { id: 'sample_bday', title: 'تولد بهترین دوستم', date: '08-15', type: 'personal', icon: '🎂' }
+          ],
+          ai_guidelines: '۱. برنامه‌ریزی واقع‌بینانه با فاصله‌های استراحت کوتاه.\n۲. اولویت‌بندی کارهای متمرکز در ساعات اوج انرژی صبحگاهی.\n۳. لحن مثبت، پرانرژی و استفاده از تیکه کلام‌های کاربر.',
           avatar_config: {
             faceShape: 'oval',
             skinTone: '#ffd1b3',
@@ -194,12 +209,16 @@ export class ApiService {
   }
 
   // ==========================================
-  // Task Management (CRUD)
+  // Task Management (CRUD) + Occasions Sync
   // ==========================================
 
   getTasks(date?: string): Observable<Task[]> {
     const allTasks = this.getStoredTasks();
     const todayIso = getTodayIso();
+    const targetDate = (date && date !== 'today' && date !== 'all') ? date : todayIso;
+
+    // Check and inject any today or tomorrow occasions into tasks
+    this.syncOccasionsIntoTasks(targetDate, allTasks);
 
     let filtered: Task[];
     if (date === 'all') {
@@ -213,6 +232,77 @@ export class ApiService {
 
     filtered.sort((a, b) => (a.scheduled_time || '12:00').localeCompare(b.scheduled_time || '12:00'));
     return of(filtered).pipe(delay(50));
+  }
+
+  /**
+   * Checks for today's and tomorrow's occasions (both official and user personal),
+   * and auto-creates high-priority reminder tasks if they don't already exist.
+   */
+  syncOccasions(targetDateIso?: string): void {
+    const today = targetDateIso || getTodayIso();
+    const tasks = this.getStoredTasks();
+    this.syncOccasionsIntoTasks(today, tasks);
+  }
+
+  private syncOccasionsIntoTasks(targetDateIso: string, tasks: Task[]): void {
+    const profile = this.getStoredProfile();
+    const { todayOccasions, tomorrowOccasions } = findOccasionsForTimeline(targetDateIso, profile?.occasions);
+
+    let hasNew = false;
+
+    // 1. Inject today's occasions
+    for (const occ of todayOccasions) {
+      const title = `🎉 امروز: «${occ.title}»`;
+      const exists = tasks.some((t) => t.date === targetDateIso && (t.title.includes(occ.title) || t.title === title));
+      if (!exists) {
+        tasks.push({
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          title: title,
+          scheduled_time: '08:30',
+          duration_minutes: 30,
+          priority: 'high',
+          category: 'personal',
+          icon: 'star',
+          notification_text: `امروز مناسبت «${occ.title}» است! شادباش و تبریک فراموش نشه ✨`,
+          is_completed: false,
+          date: targetDateIso,
+          jalali_date: getJalaliDateStr(targetDateIso),
+          jalali_display: getJalaliDisplayStr(targetDateIso),
+          jalali_day_name: getJalaliDayNameStr(targetDateIso),
+          created_at: new Date().toISOString(),
+        });
+        hasNew = true;
+      }
+    }
+
+    // 2. Inject tomorrow's advance reminder occasions (e.g. at 19:00 today)
+    for (const occ of tomorrowOccasions) {
+      const title = `🎁 یادآوری: فردا «${occ.title}» است!`;
+      const exists = tasks.some((t) => t.date === targetDateIso && (t.title.includes(occ.title) || t.title === title));
+      if (!exists) {
+        tasks.push({
+          id: Date.now() + Math.floor(Math.random() * 1000) + 1,
+          title: title,
+          scheduled_time: '19:00',
+          duration_minutes: 30,
+          priority: 'high',
+          category: 'personal',
+          icon: 'star',
+          notification_text: `فردا مناسبت «${occ.title}» است! برای هدیه و تبریک آماده باش.`,
+          is_completed: false,
+          date: targetDateIso,
+          jalali_date: getJalaliDateStr(targetDateIso),
+          jalali_display: getJalaliDisplayStr(targetDateIso),
+          jalali_day_name: getJalaliDayNameStr(targetDateIso),
+          created_at: new Date().toISOString(),
+        });
+        hasNew = true;
+      }
+    }
+
+    if (hasNew) {
+      this.saveStoredTasks(tasks);
+    }
   }
 
   toggleTaskCompletion(id: number, isCompleted: boolean): Observable<Task> {
@@ -279,6 +369,9 @@ export class ApiService {
     const targetDate = date || getTodayIso();
     const rawText = (text && text.trim()) ? text.trim() : (audioBlob ? 'یادداشت صوتی جدید برای برنامه' : 'برنامه جدید');
 
+    const profile = this.getStoredProfile();
+    const catchphrase = this.getRandomCatchphrase(profile);
+
     // Parse Persian NLP from text
     const parsed = this.parsePersianTaskText(rawText);
     const tasks = this.getStoredTasks();
@@ -295,7 +388,7 @@ export class ApiService {
         existingMatch.scheduled_time = parsed.time;
         if (parsed.duration) existingMatch.duration_minutes = parsed.duration;
         avatarMood = 'supportive';
-        voiceReply = `تسک «${existingMatch.title}» جابه‌جا شد و برای ساعت ${parsed.time} تنظیم گردید! ✨`;
+        voiceReply = `${catchphrase}! تسک «${existingMatch.title}» جابه‌جا شد و برای ساعت ${parsed.time} تنظیم گردید! ✨`;
         this.saveStoredTasks(tasks);
 
         return of({
@@ -329,7 +422,7 @@ export class ApiService {
     this.saveStoredTasks(tasks);
 
     avatarMood = 'excited';
-    voiceReply = `برنامه‌ت رو چیدم! تسک «${newTask.title}» برای ساعت ${newTask.scheduled_time} آماده‌ست. بیا با هم پرانرژی شروع کنیم! 🎯✨`;
+    voiceReply = `${catchphrase}! تسک «${newTask.title}» برای ساعت ${newTask.scheduled_time} آماده‌ست. بیا با هم بترکونیم! 🎯✨`;
 
     return of({
       voice_log_id: Date.now(),
@@ -349,6 +442,9 @@ export class ApiService {
     const todayTasks = tasks.filter((t) => t.date === targetDate);
     const uncompleted = todayTasks.filter((t) => !t.is_completed);
 
+    const profile = this.getStoredProfile();
+    const catchphrase = this.getRandomCatchphrase(profile);
+
     // Compute start time in minutes
     let startMinutes = 15 * 60; // 15:00 default
     if (currentTime && currentTime.includes(':')) {
@@ -362,7 +458,6 @@ export class ApiService {
     const rescheduledTasks: Task[] = [];
     const deferredTasks: Task[] = [];
 
-    // Separate tasks: Keep high and medium priority today, defer low priority or overflow tasks
     let currentCursor = startMinutes;
     const maxDayMinutes = 23 * 60; // 23:00
 
@@ -385,7 +480,7 @@ export class ApiService {
         task.scheduled_time = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
         task.duration_minutes = compressedDur;
         rescheduledTasks.push(task);
-        currentCursor += compressedDur + 10; // 10 min break buffer
+        currentCursor += compressedDur + 10;
       } else {
         // Defer to tomorrow
         task.date = tomorrowIso;
@@ -405,7 +500,7 @@ export class ApiService {
     return of({
       avatar_reaction: {
         mood: 'supportive',
-        voice_reply: `اصلاً نگران نباش! برنامه‌ت با آرامش بازتنظیم شد. ${deferredTasks.length > 0 ? `${deferredTasks.length} کار کم‌اولویت رو به فردا منتقل کردم تا بتونی با تمرکز نفس بکشی!` : 'تسک‌ها رو مجدد چیدم تا راحت برسی.'} بیا با هم ادامه بدیم! 🤍✨`
+        voice_reply: `${catchphrase}! اصلاً نگران نباش! برنامه‌ت با آرامش بازتنظیم شد. ${deferredTasks.length > 0 ? `${deferredTasks.length} کار کم‌اولویت رو به فردا منتقل کردم تا بتونی با تمرکز نفس بکشی!` : 'تسک‌ها رو مجدد چیدم تا راحت برسی.'} بیا با هم ادامه بدیم! 🤍✨`
       },
       tasks: refreshedToday,
       deferred_tasks: deferredTasks,
@@ -424,6 +519,9 @@ export class ApiService {
     if (taskIndex === -1) {
       return throwError(() => new Error('تسک یافت نشد'));
     }
+
+    const profile = this.getStoredProfile();
+    const catchphrase = this.getRandomCatchphrase(profile);
 
     const task = tasks[taskIndex];
     const totalDuration = task.duration_minutes || 60;
@@ -493,7 +591,6 @@ export class ApiService {
 
     const subtasks = [subtask1, subtask2, subtask3];
 
-    // Remove monolithic task and inject subtasks
     tasks.splice(taskIndex, 1, ...subtasks);
     this.saveStoredTasks(tasks);
 
@@ -504,7 +601,7 @@ export class ApiService {
       message: 'تسک با موفقیت به گام‌های کوچک و شفاف خرد شد',
       avatar_reaction: {
         mood: 'excited',
-        voice_reply: `تسک بزرگ «${task.title}» رو به ۳ گام ساده و مشخص تقسیم کردم تا بدون حس سنگینی بری جلو! 🧩✨`
+        voice_reply: `${catchphrase}! تسک بزرگ «${task.title}» رو به ۳ گام ساده و راحت تقسیم کردم تا پرانرژی بری جلو! 🧩✨`
       },
       subtasks,
       tasks: refreshedTasks
@@ -524,11 +621,12 @@ export class ApiService {
   }
 
   setupProfile(payload: ProfileSetupPayload): Observable<UserProfile> {
+    const answers = payload.lifestyle_answers || {};
     const guidelines = [
-      '۱. برنامه‌ریزی واقع‌بینانه بر اساس ساعت بیداری و خواب کاربر.',
-      '۲. تمرکز روی کارهای پرارزش در ساعات صبح و استراحت در ساعات پایانی.',
-      '۳. لحن دوستانه، حامی، بدون سرزنش و ترغیب‌کننده در مواجهه با چالش‌ها.',
-      '۴. ایجاد تعادل بین فعالیت فکری، سلامت جسمانی و آرامش روحی.'
+      `۱. برنامه‌ریزی متناسب با ریتم بدنی (${answers.chronotype || 'صبحگاهی'}) بین ساعت ${payload.wake_time || '07:00'} تا ${payload.sleep_time || '23:00'}.`,
+      `۲. سبک کارکرد: ${answers.planningStyle || 'ساختاریافته'} با فواصل تمرکز ${answers.focusSpan || 'پومودورو'}.`,
+      `۳. لحن رفتار: ${answers.aiTone || 'دوستانه و حامی'} همراه با بهره‌گیری از تیکه کلام‌ها.`,
+      `۴. مدیریت استرس و انعطاف: ${answers.resilienceStyle || 'منعطف و آرامش‌بخش'}.`
     ].join('\n');
 
     const profile: UserProfile = {
@@ -537,6 +635,9 @@ export class ApiService {
       sleep_time: payload.sleep_time || '23:00',
       avatar_config: payload.avatar_config,
       ai_guidelines: guidelines,
+      catchphrases: payload.catchphrases || ['دمت گرم', 'بزن بریم', 'حرکت کنیم'],
+      occasions: payload.occasions || [],
+      psychology_profile: answers,
       xp: 0,
       streak_days: 0,
       created_at: new Date().toISOString(),
@@ -569,6 +670,7 @@ export class ApiService {
     const userName = profile?.name || 'دوست من';
     const xp = profile?.xp || 0;
     const streak = profile?.streak_days || 0;
+    const catchphrase = this.getRandomCatchphrase(profile);
 
     const todayIso = getTodayIso();
     const tasks = this.getStoredTasks().filter((t) => t.date === todayIso);
@@ -585,9 +687,9 @@ export class ApiService {
     const count = tasks.length;
     let briefingText = '';
     if (count === 0) {
-      briefingText = `صبح بخیر ${userName} عزیز! ☀️ هنوز برنامه‌ای برای امروز ثبت نکردی. هر کاری که دوست داری انجام بدی رو بهم بگو تا بهترین زمان‌بندی رو برات بچینم!`;
+      briefingText = `${catchphrase} ${userName} عزیز! ☀️ هنوز برنامه‌ای برای امروزت ثبت نکردی. هر کاری تو ذهنته رو بهم بگو تا بهترین زمان‌بندی رو برات بچینم!`;
     } else {
-      briefingText = `صبح بخیر ${userName} جان! ☀️ امروز ${count} برنامه قشنگ داری که مهم‌ترینش «${topTask}» هست. با آرامش و انرژی شروع کن، مطمئنم امروز هم می‌درخشی! ✨`;
+      briefingText = `صبح بخیر ${userName} جان، ${catchphrase}! ☀️ امروز ${count} برنامه قشنگ داری که مهم‌ترینش «${topTask}» هست. با آرامش و قدرت شروع کن، مطمئنم امروز هم می‌درخشی! ✨`;
     }
 
     return of({
@@ -607,7 +709,7 @@ export class ApiService {
 
   private normalizePersianDigits(str: string): string {
     const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
-    const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+    const arabicDigits = '٠١٢٣٤٥٦٧۸۹';
     let res = str;
     for (let i = 0; i < 10; i++) {
       res = res.replace(new RegExp(persianDigits[i], 'g'), String(i));
@@ -651,7 +753,6 @@ export class ApiService {
         const m = isHalf ? 30 : 0;
         scheduledTime = `${String(Math.min(23, h)).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
       } else {
-        // Persian words for numbers
         const words: { [k: string]: number } = {
           یک: 1, دو: 2, سه: 3, چهار: 4, پنج: 5, شش: 6,
           هفت: 7, هشت: 8, نه: 9, ده: 10, یازده: 11, دوازده: 12,
@@ -749,13 +850,11 @@ export class ApiService {
     const list = tasks.filter((t) => t.date === date);
     if (list.length === 0) return null;
 
-    // Direct title match
     for (const t of list) {
       if (queryTitle && t.title.includes(queryTitle)) return t;
       if (rawText && rawText.includes(t.title)) return t;
     }
 
-    // Keyword match
     const keywords = ['فیزیک', 'ورزش', 'کدنویسی', 'کلاس', 'جلسه', 'خرید', 'دانشگاه', 'تمرین'];
     for (const kw of keywords) {
       if (rawText.includes(kw)) {
@@ -764,7 +863,6 @@ export class ApiService {
       }
     }
 
-    // Fallback to first uncompleted task
     return list.find((t) => !t.is_completed) || list[0] || null;
   }
 }

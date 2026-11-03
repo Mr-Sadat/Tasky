@@ -2,12 +2,16 @@
   <!-- Personalized Onboarding Wizard -->
   <app-wizard (completed)="onWizardCompleted($event)"></app-wizard>
 } @else {
-  <main class="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-purple-600 selection:text-white" dir="rtl">
+  <main class="min-h-screen bg-gradient-to-br from-slate-950 via-[#0a0718] to-slate-950 text-slate-100 flex flex-col justify-between selection:bg-purple-600 selection:text-white relative overflow-hidden" dir="rtl">
+    <!-- Glowing Ambient Glass Orbs -->
+    <div class="fixed top-[-10%] right-[-10%] w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div class="fixed bottom-[-10%] left-[-10%] w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div class="fixed top-[40%] left-[20%] w-72 h-72 bg-pink-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
     <!-- Centered Mobile-First App Wrapper -->
     <div class="w-full max-w-md mx-auto min-h-screen flex flex-col justify-between px-4 py-5 sm:px-5 relative">
       
       <!-- Top Bar / Header -->
-      <header class="flex items-center justify-between pb-4 border-b border-slate-800/80">
+      <header class="flex items-center justify-between pb-4 border-b border-white/10">
         <div class="flex items-center gap-2.5">
           <button 
             type="button"
@@ -63,7 +67,7 @@
           <button
             type="button"
             (click)="openProfileModal()"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs text-purple-200 hover:border-purple-500/50 hover:bg-slate-800 interactive-spring cursor-pointer shadow-sm select-none"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/60 backdrop-blur-xl border border-white/10 text-xs text-purple-200 hover:border-purple-500/50 hover:bg-white/5 interactive-spring cursor-pointer shadow-sm select-none"
             title="مشاهده و ویرایش پروفایل، روتین خواب و دستورالعمل‌های هوش مصنوعی (🧠)"
             aria-label="پروفایل کاربر و قوانین AI"
           >
@@ -97,7 +101,7 @@
           }
 
           <!-- Persian Date Pill -->
-          <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium text-purple-300">
+          <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900/60 backdrop-blur-xl border border-white/10 text-xs font-medium text-purple-300">
             <span class="text-purple-400">📅</span>
             <span class="hidden sm:inline">{{ formattedTodayDate() }}</span>
             <span class="sm:hidden text-[11px]">امروز</span>
@@ -160,6 +164,7 @@
       <div class="flex-1 py-4 space-y-4">
         <!-- Avatar Companion Card -->
         <app-avatar-card
+          [customization]="themeService.customization()"
           [state]="avatarState()"
           [voiceReply]="avatarVoiceReply()"
           [transcribedText]="transcribedText()"

@@ -9,7 +9,7 @@ import { FormsModule } from '@angular/forms';
   template: `
     <dialog
       #panicDialog
-      class="fixed inset-0 z-50 p-4 m-auto rounded-3xl bg-slate-900/95 border border-rose-500/40 shadow-2xl backdrop:bg-slate-950/85 backdrop:backdrop-blur-md text-slate-100 max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden outline-none animate-fade-in"
+      class="fixed inset-0 z-50 p-4 m-auto rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-white/10 shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop:bg-slate-950/85 backdrop:backdrop-blur-md text-slate-100 max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden outline-none animate-fade-in"
       (cancel)="onCancel($event)"
       (click)="onDialogClick($event)"
       dir="rtl"

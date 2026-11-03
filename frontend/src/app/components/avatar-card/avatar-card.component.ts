@@ -113,7 +113,7 @@ import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.compone
           </div>
 
           <!-- Glassmorphism Speech bubble text -->
-          <div class="relative bg-slate-800/80 rounded-2xl rounded-tr-sm p-3 border border-slate-700/60 shadow-inner backdrop-blur-md">
+          <div class="relative bg-white/10 rounded-2xl rounded-tr-sm p-3 border border-white/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-md">
             <p class="text-sm font-medium text-slate-100 leading-relaxed break-words">
               {{ voiceReply || 'سلام سارا جان! آماده‌ام تا صدات رو بشنوم و کارهای قشنگ امروزت رو برنامه‌ریزی کنم. دکمه میکروفون رو بزن!' }}
             </p>

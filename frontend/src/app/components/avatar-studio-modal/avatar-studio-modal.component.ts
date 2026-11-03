@@ -47,7 +47,7 @@ type StudioTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories';
     >
       <!-- Modal Container -->
       <div 
-        class="w-full max-w-lg rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        class="w-full max-w-lg rounded-3xl bg-slate-900/80 border border-white/15 shadow-2xl backdrop-blur-2xl overflow-hidden flex flex-col max-h-[92vh] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]"
         (click)="$event.stopPropagation()"
       >
         <!-- Modal Header -->
@@ -122,8 +122,9 @@ type StudioTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories';
           </div>
         </div>
 
-        <!-- CATEGORY NAVIGATION TABS (Horizontal Scrollable) -->
-        <div class="flex items-center gap-1.5 px-3 py-2 border-b border-slate-800/80 bg-slate-900/95 overflow-x-auto scrollbar-none shrink-0">
+        <!-- CATEGORY NAVIGATION TABS (Horizontal Scrollable with Glassmorphism) -->
+        <div class="relative border-b border-white/10 bg-slate-950/70 backdrop-blur-md px-3 py-2 shrink-0 select-none">
+          <div class="flex items-center gap-2 overflow-x-auto overflow-y-hidden flex-nowrap scroll-smooth touch-pan-x pb-1 scrollbar-thin scrollbar-thumb-purple-500/50">
           <button
             type="button"
             (click)="activeTab = 'face'"
@@ -195,6 +196,7 @@ type StudioTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories';
             <span>👓</span>
             <span>اکسسوری</span>
           </button>
+          </div>
         </div>
 
         <!-- TAB CONTENT (SCROLLABLE) -->
