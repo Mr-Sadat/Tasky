@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 
 const STORAGE_MUTED_KEY = 'tasky_tts_muted';
+const STORAGE_TTS_KEY = 'tasky_tts_api_key';
 
 @Injectable({
   providedIn: 'root'
@@ -12,11 +13,13 @@ export class TtsService {
 
   private availableVoices: SpeechSynthesisVoice[] = [];
   private currentAudio: HTMLAudioElement | null = null;
-  private readonly ttsEndpoint = (typeof window !== 'undefined' && (window as any).__TTS_ENDPOINT__)
-    ? (window as any).__TTS_ENDPOINT__
-    : (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-        ? 'http://localhost:8000/api/tts/'
-        : '/api/tts/');
+  private currentBlobUrl: string | null = null;
+
+  // Primary High-Quality Persian Neural Model (AvalAI OpenAI tts-1 with nova voice)
+  private readonly defaultApiKey = 'aa-ygex0aCfxrdMnkLIH1iLDFeAq2jbL5jHcCsR4Xh09klM2Gi3';
+  private readonly ttsApiUrl = 'https://api.avalai.ir/v1/audio/speech';
+  private readonly ttsModel = 'tts-1';
+  private readonly ttsVoice = 'nova';
 
   constructor() {
     this.initTts();
@@ -26,7 +29,6 @@ export class TtsService {
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem(STORAGE_MUTED_KEY);
-        // Default to unmuted (false)
         this.isMuted.set(stored === 'true');
       } catch {
         this.isMuted.set(false);
@@ -62,24 +64,49 @@ export class TtsService {
 
   /**
    * Speak the avatar's voice reply out loud using high-quality Persian TTS audio.
-   * Priority:
-   * 1. Backend Natural Persian TTS (AvalAI tts-1 / nova voice)
-   * 2. Browser native SpeechSynthesis fallback
+   * Uses OpenAI / AvalAI tts-1 Neural Persian Model ('nova' voice) as the primary engine.
    */
-  speak(text: string): void {
+  async speak(text: string): Promise<void> {
     if (this.isMuted() || !text || !text.trim()) {
       return;
     }
 
-    const cleanText = text.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+    // Clean text: strip emojis, markdown symbols, and extra spacing
+    const cleanText = text
+      .replace(/[\u{1F300}-\u{1F9FF}\u{1F600}-\u{1F64F}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+      .replace(/[*#_`~]/g, '')
+      .trim();
+
     if (!cleanText) return;
 
     this.stop();
 
     try {
-      // 1. Try Backend High-Quality Persian Neural TTS
-      const url = `${this.ttsEndpoint}?text=${encodeURIComponent(cleanText)}`;
-      const audio = new Audio(url);
+      const apiKey = localStorage.getItem(STORAGE_TTS_KEY) || this.defaultApiKey;
+
+      // 1. Fetch High-Quality Persian Neural Speech from AvalAI
+      const response = await fetch(this.ttsApiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: this.ttsModel,
+          voice: this.ttsVoice,
+          input: cleanText.slice(0, 600)
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`TTS server responded with status: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      this.currentBlobUrl = audioUrl;
+
+      const audio = new Audio(audioUrl);
       this.currentAudio = audio;
 
       audio.onplay = () => {
@@ -88,22 +115,21 @@ export class TtsService {
 
       audio.onended = () => {
         this.isSpeaking.set(false);
-        this.currentAudio = null;
+        this.cleanupAudio();
       };
 
       audio.onerror = (e) => {
-        console.warn('Backend Persian TTS not available or offline, falling back to browser speech:', e);
-        this.currentAudio = null;
+        console.warn('Audio playback error:', e);
+        this.isSpeaking.set(false);
+        this.cleanupAudio();
         this.fallbackBrowserSpeech(cleanText);
       };
 
-      audio.play().catch((err) => {
-        console.warn('Audio play failed or autoplay blocked, falling back to browser speech:', err);
-        this.currentAudio = null;
-        this.fallbackBrowserSpeech(cleanText);
-      });
+      await audio.play();
     } catch (err) {
-      console.warn('TTS streaming initialization error:', err);
+      console.warn('Neural Persian TTS request failed, checking browser speech fallback:', err);
+      this.isSpeaking.set(false);
+      this.cleanupAudio();
       this.fallbackBrowserSpeech(cleanText);
     }
   }
@@ -115,13 +141,12 @@ export class TtsService {
     }
 
     try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-
       if (this.availableVoices.length === 0) {
         this.loadVoices();
       }
 
+      // ONLY use browser SpeechSynthesis if a genuine Persian/Farsi voice exists
+      // Do NOT read Persian using English voices (which sounds like gibberish)
       const persianVoice = this.availableVoices.find(
         (v) =>
           v.lang.toLowerCase().startsWith('fa') ||
@@ -130,15 +155,18 @@ export class TtsService {
           v.name.toLowerCase().includes('farsi')
       );
 
-      if (persianVoice) {
-        utterance.voice = persianVoice;
-        utterance.lang = persianVoice.lang;
-      } else {
-        utterance.lang = 'fa-IR';
+      if (!persianVoice) {
+        console.info('No native Persian voice found in browser SpeechSynthesis. Skipping English fallback.');
+        this.isSpeaking.set(false);
+        return;
       }
 
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.voice = persianVoice;
+      utterance.lang = persianVoice.lang;
       utterance.rate = 0.95;
-      utterance.pitch = 1.1;
+      utterance.pitch = 1.05;
 
       utterance.onstart = () => {
         this.isSpeaking.set(true);
@@ -158,13 +186,23 @@ export class TtsService {
     }
   }
 
+  private cleanupAudio(): void {
+    if (this.currentBlobUrl) {
+      try {
+        URL.revokeObjectURL(this.currentBlobUrl);
+      } catch {}
+      this.currentBlobUrl = null;
+    }
+    this.currentAudio = null;
+  }
+
   stop(): void {
     if (this.currentAudio) {
       try {
         this.currentAudio.pause();
         this.currentAudio.currentTime = 0;
       } catch {}
-      this.currentAudio = null;
+      this.cleanupAudio();
     }
 
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
