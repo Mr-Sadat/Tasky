@@ -1,5 +1,12 @@
 import { SpecialOccasion, Task } from '../models/task.model';
-import { getTodayIso, getJalaliDateStr, getJalaliDisplayStr, getJalaliDayNameStr } from './jalali';
+import {
+  getTodayIso,
+  getJalaliDateStr,
+  getJalaliDisplayStr,
+  getJalaliDayNameStr,
+  parseLocalIsoDate,
+  toLocalIsoDate,
+} from './jalali';
 
 const STORAGE_OCCASIONS_KEY = 'tasky_occasions_calendar';
 
@@ -83,7 +90,7 @@ export function findOccasionsForTimeline(
 ): { todayOccasions: SpecialOccasion[]; tomorrowOccasions: SpecialOccasion[] } {
   const allOccasions = [...getStoredOccasions(), ...userOccasions];
 
-  const targetDate = new Date(targetDateIso);
+  const targetDate = parseLocalIsoDate(targetDateIso);
   const tomorrowDate = new Date(targetDate);
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
 
@@ -94,6 +101,7 @@ export function findOccasionsForTimeline(
   // Jalali parts for tomorrow
   const tomorrowJalali = getJalaliDateStr(tomorrowDate);
   const tomorrowJalaliMMDD = tomorrowJalali.slice(5);
+  const tomorrowIso = toLocalIsoDate(tomorrowDate);
 
   const isMatch = (occ: SpecialOccasion, jalaliFull: string, jalaliMMDD: string, isoFull: string) => {
     const d = occ.date.trim();
@@ -105,7 +113,7 @@ export function findOccasionsForTimeline(
   );
 
   const tomorrowOccasions = allOccasions.filter((occ) =>
-    isMatch(occ, tomorrowJalali, tomorrowJalaliMMDD, tomorrowDate.toISOString().split('T')[0])
+    isMatch(occ, tomorrowJalali, tomorrowJalaliMMDD, tomorrowIso)
   );
 
   return { todayOccasions, tomorrowOccasions };

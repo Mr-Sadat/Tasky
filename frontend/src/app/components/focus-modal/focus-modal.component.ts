@@ -3,6 +3,7 @@ import {
   Input,
   Output,
   EventEmitter,
+  HostListener,
   OnInit,
   OnDestroy,
   signal,
@@ -63,6 +64,9 @@ const PERSIAN_AFFIRMATIONS = [
       <div
         class="relative w-full max-w-md rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-white/10 shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.15)] p-5 sm:p-6 overflow-hidden flex flex-col justify-between max-h-[92vh] overflow-y-auto"
         (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="focusModalTitle"
       >
         <!-- Ambient Glowing Background Accents -->
         <div
@@ -89,7 +93,7 @@ const PERSIAN_AFFIRMATIONS = [
                   مدت پیش‌فرض: {{ task.duration_minutes }} دقیقه
                 </span>
               </div>
-              <h3 class="text-sm sm:text-base font-extrabold text-white truncate mt-0.5" [title]="task.title">
+              <h3 id="focusModalTitle" class="text-sm sm:text-base font-extrabold text-white truncate mt-0.5" [title]="task.title">
                 {{ task.title }}
               </h3>
             </div>
@@ -353,6 +357,11 @@ export class FocusModalComponent implements OnInit, OnDestroy {
 
   @Output() close = new EventEmitter<void>();
   @Output() completed = new EventEmitter<Task>();
+
+  @HostListener('window:keydown.escape')
+  handleEscape(): void {
+    this.closeModal();
+  }
 
   readonly Math = Math;
   readonly radius = 52;

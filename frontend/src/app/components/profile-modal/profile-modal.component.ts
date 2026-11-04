@@ -1,53 +1,38 @@
-import { Component, ElementRef, EventEmitter, Input, OnInit, OnDestroy, Output, ViewChild, inject, signal } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, OnInit, OnDestroy, Output, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
-import { ApiService } from '../../services/api.service';
+import { ApiService, CURRENT_SCHEMA_VERSION } from '../../services/api.service';
+import { TtsService } from '../../services/tts.service';
 import {
   ThemeService,
-  SKIN_TONE_OPTIONS,
-  FACE_SHAPE_OPTIONS,
-  HAIR_STYLE_OPTIONS,
-  HAIR_COLOR_OPTIONS,
-  EYE_SHAPE_OPTIONS,
-  EYE_COLOR_OPTIONS,
-  EYEBROW_OPTIONS,
-  MOUTH_EXPRESSION_OPTIONS,
-  LIP_COLOR_OPTIONS,
-  OUTFIT_STYLE_OPTIONS,
-  OUTFIT_COLOR_OPTIONS,
-  ACCESSORY_OPTIONS,
   DEFAULT_AVATAR_CUSTOMIZATION,
   sanitizeAvatarConfig,
 } from '../../services/theme.service';
 import {
   UserProfile,
   AvatarCustomization,
-  FaceShape,
-  HairStyle,
-  EyeShape,
-  EyebrowStyle,
-  MouthExpression,
-  OutfitStyle,
-  AvatarAccessory,
   SpecialOccasion,
 } from '../../models/task.model';
 import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.component';
 import { JalaliDatePickerModalComponent } from '../jalali-date-picker/jalali-date-picker-modal.component';
+import { AvatarEditorComponent } from '../avatar-editor/avatar-editor.component';
 
-type AvatarSubTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'accessories';
-type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'avatar';
+type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'avatar' | 'settings';
 
 @Component({
   selector: 'app-profile-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, DynamicAvatarComponent, JalaliDatePickerModalComponent],
+  imports: [CommonModule, FormsModule, DynamicAvatarComponent, JalaliDatePickerModalComponent, AvatarEditorComponent],
   template: `
     <dialog
       #profileDialog
       class="fixed inset-0 z-50 p-4 m-auto rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-white/10 shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.15)] text-slate-100 max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden outline-none animate-fade-in"
       [attr.closedby]="'any'"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="profileModalTitle"
       (cancel)="onDialogCancel($event)"
       (click)="onDialogClick($event)"
       dir="rtl"
@@ -59,8 +44,8 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
             👤
           </div>
           <div>
-            <h3 class="text-base font-bold text-white tracking-tight">پروفایل، مناسبت‌ها و آواتار</h3>
-            <p class="text-[11px] text-slate-400">شخصی‌سازی سبک زندگی، مناسبت‌های مهم، تکیه‌کلام و ظاهر آواتار</p>
+            <h3 id="profileModalTitle" class="text-base font-bold text-white tracking-tight">پروفایل، تنظیمات و آواتار</h3>
+            <p class="text-[11px] text-slate-400">شخصی‌سازی سبک زندگی، مناسبت‌ها، پشتیبان‌گیری، حریم خصوصی و ظاهر</p>
           </div>
         </div>
 
@@ -97,7 +82,7 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
             : 'text-slate-400 hover:text-white hover:bg-white/5'"
         >
           <span>🎉</span>
-          <span>مناسبت‌های من</span>
+          <span>مناسبت‌ها</span>
         </button>
 
         <button
@@ -109,7 +94,7 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
             : 'text-slate-400 hover:text-white hover:bg-white/5'"
         >
           <span>💬</span>
-          <span>تکیه‌کلام AI</span>
+          <span>تکیه‌کلام</span>
         </button>
 
         <button
@@ -121,7 +106,7 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
             : 'text-slate-400 hover:text-white hover:bg-white/5'"
         >
           <span>🧠</span>
-          <span>قوانین هوش مصنوعی</span>
+          <span>راهنما و ریتم</span>
         </button>
 
         <button
@@ -134,6 +119,18 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
         >
           <span>🎨</span>
           <span>طراحی آواتار</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('settings')"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
+          [ngClass]="activeTab() === 'settings'
+            ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-900/40'
+            : 'text-slate-400 hover:text-white hover:bg-white/5'"
+        >
+          <span>⚙️</span>
+          <span>پشتیبان و حریم خصوصی</span>
         </button>
       </div>
 
@@ -189,18 +186,18 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
               </div>
 
               <p class="text-[11px] text-slate-300 leading-relaxed bg-purple-950/30 p-2.5 rounded-xl border border-purple-500/20">
-                💡 <strong class="text-purple-200">نکته هوشمند:</strong> هوش مصنوعی تَسکی اکیداً مانع برنامه‌ریزی هرگونه تسک در ساعات استراحت و خواب شما می‌شود.
+                💡 <strong class="text-purple-200">نکته ریتم زیستی:</strong> الگوریتم برنامه‌ریزی هوشمند تَسکی مانع زمان‌بندی تسک‌ها در ساعات خواب شما می‌شود.
               </p>
             </div>
           </div>
         }
 
-        <!-- TAB 2: SPECIAL OCCASIONS (مناسبت‌های مهم من) -->
+        <!-- TAB 2: SPECIAL OCCASIONS -->
         @if (activeTab() === 'occasions') {
           <div class="space-y-4 animate-fade-in">
             <div class="p-3.5 rounded-2xl bg-purple-950/30 border border-purple-500/20">
               <p class="text-xs text-purple-200 leading-relaxed">
-                🎉 تاریخ‌های مهم زندگی‌تان (تولد، سالگرد، سررسیدها) را ثبت کنید. تسکی در <strong>روز قبل</strong> و <strong>خود روز مناسبت</strong> به عنوان نخستین و مهم‌ترین کار روز به شما یادآوری می‌کند!
+                🎉 تاریخ‌های مهم زندگی‌تان (تولد، سالگرد، سررسیدها) را ثبت کنید. تسکی در <strong>روز قبل</strong> و <strong>خود روز مناسبت</strong> به عنوان یادآور روزانه به شما نمایش می‌دهد.
               </p>
             </div>
 
@@ -211,20 +208,20 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
                 <input
                   type="text"
                   [(ngModel)]="newOccasionTitle"
-                  placeholder="عنوان (مثلاً: تولد همسرم، سالگرد ازدواج)"
+                  placeholder="عنوان (مثلاً: تولد همسرم، سالگرد عقد)"
                   class="sm:col-span-6 px-3 py-2 rounded-xl bg-slate-950/80 border border-white/10 text-white text-xs outline-none focus:border-purple-500"
                 />
                 <div class="sm:col-span-4 flex items-center gap-1">
                   <input
                     type="text"
                     [(ngModel)]="newOccasionDate"
-                    placeholder="تاریخ (مثلاً 08-25)"
-                    class="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-white/10 text-white text-xs outline-none focus:border-purple-500 text-center font-mono"
+                    placeholder="تاریخ شمسی (مثلاً: 08-15)"
+                    class="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-white/10 text-white text-xs text-center font-mono outline-none focus:border-purple-500"
                   />
                   <button
                     type="button"
                     (click)="isDatePickerOpen = true"
-                    class="shrink-0 p-2 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/30 text-purple-200 transition cursor-pointer text-xs"
+                    class="p-2 rounded-xl bg-purple-600/30 hover:bg-purple-600 border border-purple-500/40 text-purple-200 hover:text-white transition cursor-pointer text-xs shrink-0"
                     title="انتخاب از تقویم شمسی 📅"
                   >
                     📅
@@ -234,62 +231,63 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
                   type="button"
                   (click)="addOccasion()"
                   [disabled]="!newOccasionTitle.trim() || !newOccasionDate.trim()"
-                  class="sm:col-span-2 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                  class="sm:col-span-2 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white text-xs font-bold transition cursor-pointer shadow-md shadow-purple-900/40"
                 >
-                  افزودن
+                  ثبت
                 </button>
               </div>
             </div>
 
-            <!-- Occasion List -->
+            <!-- Occasions List -->
             <div class="space-y-2">
               <span class="text-xs font-bold text-slate-300 block">مناسبت‌های ثبت‌شده شما ({{ editOccasions.length }} مورد):</span>
-              
               @if (editOccasions.length === 0) {
-                <div class="text-center py-6 px-4 rounded-2xl bg-white/5 border border-white/5 text-slate-400 text-xs">
-                  هنوز مناسبتی ثبت نکرده‌اید. می‌توانید با فرم بالا تاریخ‌های مهم را اضافه کنید.
+                <div class="p-6 text-center text-xs text-slate-400 rounded-2xl bg-white/5 border border-white/5">
+                  هنوز هیچ مناسبتی ثبت نکرده‌اید.
                 </div>
-              }
-
-              @for (occ of editOccasions; track occ.id) {
-                <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-purple-500/30 transition">
-                  <div class="flex items-center gap-2">
-                    <span class="text-lg">{{ occ.icon || '🎁' }}</span>
-                    <div>
-                      <span class="text-xs font-bold text-white block">{{ occ.title }}</span>
-                      <span class="text-[10px] text-purple-300 font-mono">{{ occ.date }}</span>
+              } @else {
+                <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                  @for (occ of editOccasions; track occ.id) {
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-white/10 text-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="text-base">{{ occ.icon || '🎁' }}</span>
+                        <div>
+                          <div class="font-bold text-white">{{ occ.title }}</div>
+                          <div class="text-[10px] text-purple-300 font-mono">{{ occ.date }}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        (click)="removeOccasion(occ.id)"
+                        class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                        title="حذف مناسبت"
+                      >
+                        ✕
+                      </button>
                     </div>
-                  </div>
-                  <button
-                    type="button"
-                    (click)="removeOccasion(occ.id)"
-                    class="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center text-xs transition cursor-pointer"
-                    title="حذف مناسبت"
-                  >
-                    🗑️
-                  </button>
+                  }
                 </div>
               }
             </div>
           </div>
         }
 
-        <!-- TAB 3: CATCHPHRASES (تکیه‌کلام‌های هوش مصنوعی) -->
+        <!-- TAB 3: User Catchphrases -->
         @if (activeTab() === 'catchphrases') {
           <div class="space-y-4 animate-fade-in">
             <div class="p-3.5 rounded-2xl bg-purple-950/30 border border-purple-500/20">
               <p class="text-xs text-purple-200 leading-relaxed">
-                💬 تکیه‌کلام‌ها و عبارات انگیزشی دلخواهتان را تعیین کنید تا هوش مصنوعی در پیام‌های صبحگاهی، گفتگوها و بازخوردهای تسکی از آن‌ها استفاده کند!
+                🗣️ تکیه‌کلام‌های روزمره شما: در پیام‌های انگیزشی و صحبت‌های روزانه دستیار از این عبارات استفاده خواهد شد.
               </p>
             </div>
 
-            <!-- Custom Catchphrase Input -->
-            <div class="flex items-center gap-2">
+            <!-- Add custom catchphrase -->
+            <div class="flex gap-2">
               <input
                 type="text"
                 [(ngModel)]="newCatchphrase"
                 (keydown.enter)="addCatchphrase()"
-                placeholder="مثلاً: حرکت کنیم، بنازم، دلاور..."
+                placeholder="تکیه‌کلام جدید (مثلاً: دمت گرم، پرانرژی...)"
                 class="flex-1 px-3 py-2 rounded-xl bg-slate-950/80 border border-white/10 text-white text-xs outline-none focus:border-purple-500"
               />
               <button
@@ -304,10 +302,10 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
 
             <!-- Active Catchphrases -->
             <div>
-              <span class="text-xs font-bold text-slate-300 block mb-2">تکیه‌کلام‌های فعال شما:</span>
+              <span class="text-xs font-bold text-slate-300 block mb-2">تکیه‌کلام‌های فعال:</span>
               <div class="flex flex-wrap gap-1.5">
                 @for (phrase of editCatchphrases; track phrase) {
-                  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-purple-600/30 to-pink-600/30 border border-purple-400/40 text-purple-200 text-xs font-medium">
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-600/30 border border-purple-400/40 text-purple-200 text-xs font-medium">
                     <span>{{ phrase }}</span>
                     <button
                       type="button"
@@ -316,15 +314,12 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
                     >✕</button>
                   </span>
                 }
-                @if (editCatchphrases.length === 0) {
-                  <span class="text-xs text-slate-400 italic">هیچ تکیه‌کلامی انتخاب نشده است. از پیشنهادات زیر انتخاب کنید.</span>
-                }
               </div>
             </div>
 
             <!-- Preset Suggestions -->
             <div class="pt-2 border-t border-white/10">
-              <span class="text-xs font-bold text-slate-400 block mb-2">💡 پیشنهادات محبوب و صمیمی:</span>
+              <span class="text-xs font-bold text-slate-400 block mb-2">💡 پیشنهادات آماده:</span>
               <div class="flex flex-wrap gap-1.5">
                 @for (preset of presetCatchphrases; track preset) {
                   <button
@@ -346,7 +341,7 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
           <div class="space-y-3 animate-fade-in">
             <div class="flex items-center justify-between">
               <label for="profileGuidelines" class="block text-xs font-bold text-slate-300">
-                قوانین ۴ گانه هوش مصنوعی اختصاصی شما:
+                راهنما و ریتم رفتار دستیار شما:
               </label>
 
               <button
@@ -356,21 +351,21 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
                 class="text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-300 hover:text-white hover:bg-purple-900/70 transition cursor-pointer flex items-center gap-1 disabled:opacity-50"
               >
                 <span>✨</span>
-                <span>{{ isRegenerating() ? 'در حال بازنویسی...' : 'بازنویسی با AI' }}</span>
+                <span>{{ isRegenerating() ? 'در حال بازنویسی...' : 'بازنویسی قوانین' }}</span>
               </button>
             </div>
 
             <textarea
               id="profileGuidelines"
               [(ngModel)]="editGuidelines"
-              rows="9"
+              rows="8"
               class="w-full p-3 rounded-2xl bg-slate-950/80 border border-white/10 text-white text-xs leading-relaxed focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition resize-none font-mono"
-              placeholder="قوانین استخراج شده برای لحن، شخصیت و روتین‌های روزانه..."
+              placeholder="قوانین ریتم شبانه‌روز، سبک کار و شیوه برنامه‌ریزی..."
             ></textarea>
           </div>
         }
 
-        <!-- TAB 5: INSTAGRAM-STYLE AVATAR CREATOR (REAL-TIME REACTIVE) -->
+        <!-- TAB 5: AVATAR CREATOR (SHARED COMPONENT) -->
         @if (activeTab() === 'avatar') {
           <div class="space-y-4 animate-fade-in">
             <!-- Live Preview Hero Card -->
@@ -385,10 +380,10 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
 
               <div class="flex-1 min-w-0">
                 <span class="text-xs font-bold text-white block mb-0.5">
-                  چهره اختصاصی شما (سبک اینستاگرام)
+                  چهره اختصاصی شما
                 </span>
                 <p class="text-[11px] text-purple-200/80 leading-snug mb-2">
-                  اجزای صورت، مو، چشم و استایل لباس رو طبق سلیقه‌ت تغییر بده!
+                  اجزای صورت، مو، چشم و استایل لباس را طبق سلیقه‌تان تغییر دهید.
                 </p>
 
                 <div class="flex items-center gap-2 flex-wrap">
@@ -400,397 +395,172 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
                     <span>🎲</span>
                     <span>پیشنهاد تصادفی</span>
                   </button>
-
-                  <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-medium select-none">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>تغییر بلادرنگ و فوری</span>
-                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Subtab Navigation for Avatar Features (Horizontal Scroll) -->
-            <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950/80 border border-white/10 overflow-x-auto flex-nowrap scrollbar-none">
-              <button
-                type="button"
-                (click)="avatarSubTab = 'face'"
-                class="px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition cursor-pointer shrink-0"
-                [ngClass]="avatarSubTab === 'face' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'"
-              >
-                👤 صورت و پوست
-              </button>
-              <button
-                type="button"
-                (click)="avatarSubTab = 'hair'"
-                class="px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition cursor-pointer shrink-0"
-                [ngClass]="avatarSubTab === 'hair' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'"
-              >
-                💇‍♀️ مو و رنگ
-              </button>
-              <button
-                type="button"
-                (click)="avatarSubTab = 'eyes'"
-                class="px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition cursor-pointer shrink-0"
-                [ngClass]="avatarSubTab === 'eyes' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'"
-              >
-                👁️ چشم و ابرو
-              </button>
-              <button
-                type="button"
-                (click)="avatarSubTab = 'mouth'"
-                class="px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition cursor-pointer shrink-0"
-                [ngClass]="avatarSubTab === 'mouth' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'"
-              >
-                👄 لب و اخلاق
-              </button>
-              <button
-                type="button"
-                (click)="avatarSubTab = 'outfit'"
-                class="px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition cursor-pointer shrink-0"
-                [ngClass]="avatarSubTab === 'outfit' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'"
-              >
-                👕 استایل و لباس
-              </button>
-              <button
-                type="button"
-                (click)="avatarSubTab = 'accessories'"
-                class="px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition cursor-pointer shrink-0"
-                [ngClass]="avatarSubTab === 'accessories' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'"
-              >
-                👓 اکسسوری
-              </button>
+            <!-- SHARED AVATAR EDITOR -->
+            <app-avatar-editor
+              [customization]="editAvatarConfig"
+              (customizationChange)="onAvatarChange($event)"
+            ></app-avatar-editor>
+          </div>
+        }
+
+        <!-- TAB 6: SETTINGS, BACKUP & PRIVACY -->
+        @if (activeTab() === 'settings') {
+          <div class="space-y-4 animate-fade-in">
+            <!-- 1. DATA BACKUP & RESTORE -->
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <div class="flex items-center gap-2">
+                <span class="text-base">💾</span>
+                <div>
+                  <h4 class="text-xs font-bold text-white">پشتیبان‌گیری و بازیابی داده‌ها (Local-First)</h4>
+                  <p class="text-[10px] text-slate-400">تمام تسک‌ها، پروفایل و تنظیمات در مرورگر شما ذخیره شده‌اند (نسخه ۲)</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 pt-1 flex-wrap">
+                <button
+                  type="button"
+                  (click)="downloadBackup()"
+                  class="px-3.5 py-2 rounded-xl bg-emerald-600/30 hover:bg-emerald-600 border border-emerald-500/40 text-emerald-200 hover:text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>📥</span>
+                  <span>دریافت نسخه پشتیبان (JSON)</span>
+                </button>
+
+                <label
+                  class="px-3.5 py-2 rounded-xl bg-purple-600/30 hover:bg-purple-600 border border-purple-500/40 text-purple-200 hover:text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>📤</span>
+                  <span>بازیابی فایل پشتیبان</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    class="hidden"
+                    (change)="onImportFileSelected($event)"
+                  />
+                </label>
+              </div>
+
+              @if (backupMessage) {
+                <div
+                  class="p-2.5 rounded-xl text-xs font-medium"
+                  [ngClass]="backupSuccess ? 'bg-emerald-950/60 border border-emerald-500/30 text-emerald-300' : 'bg-rose-950/60 border border-rose-500/30 text-rose-300'"
+                >
+                  {{ backupMessage }}
+                </div>
+              }
             </div>
 
-            <!-- SUBTAB 1: FACE & SKIN -->
-            @if (avatarSubTab === 'face') {
-              <div class="space-y-3 animate-fade-in">
+            <!-- 2. PRIVACY & TTS SETTINGS -->
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <div class="flex items-center gap-2">
+                <span class="text-base">🔒</span>
                 <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">رنگ پوست:</span>
-                  <div class="grid grid-cols-6 gap-1.5">
-                    @for (skin of skinTones; track skin.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ skinTone: skin.hex })"
-                        class="h-8 rounded-xl border transition-all flex items-center justify-center cursor-pointer"
-                        [ngClass]="editAvatarConfig.skinTone === skin.hex
-                          ? 'border-purple-400 ring-2 ring-purple-500 scale-105'
-                          : 'border-white/10 hover:border-white/30'"
-                        [style.background-color]="skin.hex"
-                        [title]="skin.name"
-                      >
-                        @if (editAvatarConfig.skinTone === skin.hex) {
-                          <span class="text-[10px] text-slate-900 font-bold">✓</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-
-                <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">فرم صورت:</span>
-                  <div class="grid grid-cols-2 gap-2">
-                    @for (shape of faceShapes; track shape.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ faceShape: shape.id })"
-                        class="p-2.5 rounded-xl border text-right transition-all cursor-pointer flex items-center justify-between"
-                        [ngClass]="editAvatarConfig.faceShape === shape.id
-                          ? 'bg-purple-600/30 border-purple-500 text-white font-bold'
-                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'"
-                      >
-                        <span class="text-xs">{{ shape.label }}</span>
-                        @if (editAvatarConfig.faceShape === shape.id) {
-                          <span class="text-purple-400 text-xs">✓</span>
-                        }
-                      </button>
-                    }
-                  </div>
+                  <h4 class="text-xs font-bold text-white">حریم خصوصی و سنتز گفتار (TTS)</h4>
+                  <p class="text-[10px] text-slate-400">نحوه خوانش صوتی پیام‌های آواتار</p>
                 </div>
               </div>
-            }
 
-            <!-- SUBTAB 2: HAIR & COLOR -->
-            @if (avatarSubTab === 'hair') {
-              <div class="space-y-3 animate-fade-in">
-                <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">مدل مو:</span>
-                  <div class="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
-                    @for (hair of hairStyles; track hair.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ hairStyle: hair.id })"
-                        class="p-2.5 rounded-xl border text-right transition-all cursor-pointer flex items-center justify-between"
-                        [ngClass]="editAvatarConfig.hairStyle === hair.id
-                          ? 'bg-purple-600/30 border-purple-500 text-white font-bold'
-                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'"
-                      >
-                        <span class="text-xs">{{ hair.label }}</span>
-                        @if (editAvatarConfig.hairStyle === hair.id) {
-                          <span class="text-purple-400 text-xs">✓</span>
-                        }
-                      </button>
-                    }
-                  </div>
+              <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="useLocalTtsOnly"
+                  (change)="onTtsPrivacyToggle()"
+                  class="mt-0.5 rounded text-purple-600 focus:ring-purple-500 bg-slate-900 border-white/20"
+                />
+                <div class="text-xs leading-relaxed">
+                  <span class="font-bold text-slate-200">صرفاً استفاده از صدای محلی مرورگر (عدم ارسال متن به سرور صوتی)</span>
+                  <p class="text-[10px] text-slate-400 mt-0.5">
+                    در حالت پیش‌فرض برای دستیابی به تلفظ طبیعی و باکیفیت فارسی، متن پاسخ‌های کوتاه آواتار به سرویس AvalAI ارسال می‌شود. با فعال‌سازی این گزینه، پردازش کاملاً داخل دستگاه باقی می‌ماند.
+                  </p>
                 </div>
+              </label>
+            </div>
 
+            <!-- 3. BYOK EXTERNAL LLM CONFIGURATION -->
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <div class="flex items-center gap-2">
+                <span class="text-base">🔑</span>
                 <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">رنگ مو:</span>
-                  <div class="grid grid-cols-6 gap-1.5">
-                    @for (color of hairColors; track color.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ hairColor: color.hex })"
-                        class="h-8 rounded-xl border transition-all flex items-center justify-center cursor-pointer"
-                        [ngClass]="editAvatarConfig.hairColor === color.hex
-                          ? 'border-purple-400 ring-2 ring-purple-500 scale-105'
-                          : 'border-white/10 hover:border-white/30'"
-                        [style.background-color]="color.hex"
-                        [title]="color.name"
-                      >
-                        @if (editAvatarConfig.hairColor === color.hex) {
-                          <span class="text-[10px] text-white font-bold drop-shadow">✓</span>
-                        }
-                      </button>
-                    }
-                  </div>
+                  <h4 class="text-xs font-bold text-white">اتصال به مدل زبانی دلخواه (BYOK)</h4>
+                  <p class="text-[10px] text-slate-400">اتصال اختیاری به سرور یا کلید OpenAI/پروکسی خودتان</p>
                 </div>
               </div>
-            }
 
-            <!-- SUBTAB 3: EYES & EYEBROWS -->
-            @if (avatarSubTab === 'eyes') {
-              <div class="space-y-3 animate-fade-in">
-                <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">حالت چشم‌ها:</span>
-                  <div class="grid grid-cols-2 gap-2">
-                    @for (eye of eyeShapes; track eye.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ eyeShape: eye.id })"
-                        class="p-2.5 rounded-xl border text-right transition-all cursor-pointer flex items-center justify-between"
-                        [ngClass]="editAvatarConfig.eyeShape === eye.id
-                          ? 'bg-purple-600/30 border-purple-500 text-white font-bold'
-                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'"
-                      >
-                        <span class="text-xs">{{ eye.label }}</span>
-                        @if (editAvatarConfig.eyeShape === eye.id) {
-                          <span class="text-purple-400 text-xs">✓</span>
-                        }
-                      </button>
-                    }
+              <label class="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="useCustomLlm"
+                  class="rounded text-purple-600 focus:ring-purple-500 bg-slate-900 border-white/20"
+                />
+                <span class="text-xs font-bold text-slate-200">فعال‌سازی هوش مصنوعی خارجی</span>
+              </label>
+
+              @if (useCustomLlm) {
+                <div class="space-y-2.5 pt-1 animate-fade-in">
+                  <div>
+                    <label class="block text-[10px] font-semibold text-slate-400 mb-1">Base URL (پیش‌فرض OpenAI):</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="customLlmBaseUrl"
+                      placeholder="https://api.openai.com/v1"
+                      dir="ltr"
+                      class="w-full px-3 py-1.5 rounded-xl bg-slate-950/80 border border-white/10 text-white text-xs font-mono outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-[10px] font-semibold text-slate-400 mb-1">API Key:</label>
+                    <input
+                      type="password"
+                      [(ngModel)]="customLlmApiKey"
+                      placeholder="sk-..."
+                      dir="ltr"
+                      class="w-full px-3 py-1.5 rounded-xl bg-slate-950/80 border border-white/10 text-white text-xs font-mono outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-[10px] font-semibold text-slate-400 mb-1">نام مدل (Model):</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="customLlmModel"
+                      placeholder="gpt-4o-mini"
+                      dir="ltr"
+                      class="w-full px-3 py-1.5 rounded-xl bg-slate-950/80 border border-white/10 text-white text-xs font-mono outline-none focus:border-purple-500"
+                    />
                   </div>
                 </div>
-
-                <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">رنگ چشم:</span>
-                  <div class="grid grid-cols-6 gap-1.5">
-                    @for (ec of eyeColors; track ec.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ eyeColor: ec.hex })"
-                        class="h-8 rounded-xl border transition-all flex items-center justify-center cursor-pointer"
-                        [ngClass]="editAvatarConfig.eyeColor === ec.hex
-                          ? 'border-purple-400 ring-2 ring-purple-500 scale-105'
-                          : 'border-white/10 hover:border-white/30'"
-                        [style.background-color]="ec.hex"
-                        [title]="ec.name"
-                      >
-                        @if (editAvatarConfig.eyeColor === ec.hex) {
-                          <span class="text-[10px] text-white font-bold drop-shadow">✓</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-
-                <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">مدل ابروها:</span>
-                  <div class="grid grid-cols-2 gap-2">
-                    @for (eb of eyebrows; track eb.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ eyebrows: eb.id })"
-                        class="p-2.5 rounded-xl border text-right transition-all cursor-pointer flex items-center justify-between"
-                        [ngClass]="editAvatarConfig.eyebrows === eb.id
-                          ? 'bg-purple-600/30 border-purple-500 text-white font-bold'
-                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'"
-                      >
-                        <span class="text-xs">{{ eb.label }}</span>
-                        @if (editAvatarConfig.eyebrows === eb.id) {
-                          <span class="text-purple-400 text-xs">✓</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
-
-            <!-- SUBTAB 4: MOUTH & LIPS -->
-            @if (avatarSubTab === 'mouth') {
-              <div class="space-y-3 animate-fade-in">
-                <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">فرم لبخند و لب:</span>
-                  <div class="grid grid-cols-2 gap-2">
-                    @for (m of mouthExpressions; track m.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ mouthExpression: m.id })"
-                        class="p-2.5 rounded-xl border text-right transition-all cursor-pointer flex items-center justify-between"
-                        [ngClass]="editAvatarConfig.mouthExpression === m.id
-                          ? 'bg-purple-600/30 border-purple-500 text-white font-bold'
-                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'"
-                      >
-                        <span class="text-xs">{{ m.label }}</span>
-                        @if (editAvatarConfig.mouthExpression === m.id) {
-                          <span class="text-purple-400 text-xs">✓</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-
-                <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">رنگ لب:</span>
-                  <div class="grid grid-cols-5 gap-1.5">
-                    @for (lc of lipColors; track lc.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ lipColor: lc.hex })"
-                        class="h-8 rounded-xl border transition-all flex items-center justify-center cursor-pointer"
-                        [ngClass]="editAvatarConfig.lipColor === lc.hex
-                          ? 'border-purple-400 ring-2 ring-purple-500 scale-105'
-                          : 'border-white/10 hover:border-white/30'"
-                        [style.background-color]="lc.hex"
-                        [title]="lc.name"
-                      >
-                        @if (editAvatarConfig.lipColor === lc.hex) {
-                          <span class="text-[10px] text-white font-bold drop-shadow">✓</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
-
-            <!-- SUBTAB 5: OUTFIT & STYLE -->
-            @if (avatarSubTab === 'outfit') {
-              <div class="space-y-3 animate-fade-in">
-                <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">مدل لباس:</span>
-                  <div class="grid grid-cols-2 gap-2">
-                    @for (outfit of outfitStyles; track outfit.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ outfitStyle: outfit.id })"
-                        class="p-2.5 rounded-xl border text-right transition-all cursor-pointer flex items-center justify-between"
-                        [ngClass]="editAvatarConfig.outfitStyle === outfit.id
-                          ? 'bg-purple-600/30 border-purple-500 text-white font-bold'
-                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'"
-                      >
-                        <span class="text-xs">{{ outfit.label }}</span>
-                        @if (editAvatarConfig.outfitStyle === outfit.id) {
-                          <span class="text-purple-400 text-xs">✓</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-
-                <div>
-                  <span class="block text-xs font-bold text-slate-300 mb-1.5">رنگ لباس:</span>
-                  <div class="grid grid-cols-6 gap-1.5">
-                    @for (oc of outfitColors; track oc.id) {
-                      <button
-                        type="button"
-                        (click)="updateAvatarProp({ outfitColor: oc.hex })"
-                        class="h-8 rounded-xl border transition-all flex items-center justify-center cursor-pointer"
-                        [ngClass]="editAvatarConfig.outfitColor === oc.hex
-                          ? 'border-purple-400 ring-2 ring-purple-500 scale-105'
-                          : 'border-white/10 hover:border-white/30'"
-                        [style.background-color]="oc.hex"
-                        [title]="oc.name"
-                      >
-                        @if (editAvatarConfig.outfitColor === oc.hex) {
-                          <span class="text-[10px] text-white font-bold drop-shadow">✓</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
-
-            <!-- SUBTAB 6: ACCESSORIES -->
-            @if (avatarSubTab === 'accessories') {
-              <div class="space-y-3 animate-fade-in">
-                <span class="block text-xs font-bold text-slate-300 mb-1.5">اکسسوری و عینک:</span>
-                <div class="grid grid-cols-2 gap-2">
-                  @for (acc of accessories; track acc.id) {
-                    <button
-                      type="button"
-                      (click)="updateAvatarProp({ accessory: acc.id })"
-                      class="p-2.5 rounded-xl border text-right transition-all cursor-pointer flex items-center justify-between"
-                      [ngClass]="editAvatarConfig.accessory === acc.id
-                        ? 'bg-purple-600/30 border-purple-500 text-white font-bold'
-                        : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'"
-                    >
-                      <span class="text-xs">{{ acc.label }}</span>
-                      @if (editAvatarConfig.accessory === acc.id) {
-                        <span class="text-purple-400 text-xs">✓</span>
-                      }
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-
+              }
+            </div>
           </div>
         }
       </div>
 
       <!-- Dialog Footer -->
       <div class="pt-3 border-t border-white/10 flex items-center justify-between gap-2.5 shrink-0">
-        @if (activeTab() === 'avatar') {
-          <div class="flex items-center gap-2 text-xs text-emerald-400 font-semibold select-none">
-            <span class="flex h-2.5 w-2.5 relative">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-            </span>
-            <span>تغییرات در لحظه ذخیره و اعمال شدند</span>
-          </div>
+        <button
+          type="button"
+          (click)="closeModal()"
+          class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition cursor-pointer"
+        >
+          انصراف
+        </button>
 
-          <button
-            type="button"
-            (click)="closeModal()"
-            class="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-900/40 hover:brightness-110 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
-          >
-            <span>✓</span>
-            <span>بستن</span>
-          </button>
-        } @else {
-          <div class="flex items-center justify-end gap-2.5 w-full">
-            <button
-              type="button"
-              (click)="closeModal()"
-              class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 transition cursor-pointer"
-            >
-              انصراف
-            </button>
-
-            <button
-              type="button"
-              (click)="saveProfile()"
-              [disabled]="isSaving()"
-              class="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-900/40 hover:brightness-110 active:scale-95 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-            >
-              <span>✓</span>
-              <span>{{ isSaving() ? 'در حال ذخیره...' : 'ذخیره تنظیمات' }}</span>
-            </button>
-          </div>
-        }
+        <button
+          type="button"
+          (click)="saveProfile()"
+          [disabled]="isSaving()"
+          class="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-900/40 hover:brightness-110 active:scale-95 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+        >
+          <span>✓</span>
+          <span>{{ isSaving() ? 'در حال ذخیره...' : 'ذخیره تنظیمات' }}</span>
+        </button>
       </div>
+
       <!-- Jalali Date Picker Sub-Modal -->
       @if (isDatePickerOpen) {
         <app-jalali-date-picker-modal
@@ -817,12 +587,11 @@ export class ProfileModalComponent implements OnInit, OnDestroy {
 
   private readonly apiService = inject(ApiService);
   private readonly themeService = inject(ThemeService);
+  private readonly ttsService = inject(TtsService);
 
   readonly activeTab = signal<ProfileTab>('general');
   readonly isSaving = signal<boolean>(false);
   readonly isRegenerating = signal<boolean>(false);
-
-  avatarSubTab: AvatarSubTab = 'face';
 
   editName: string = '';
   editWakeTime: string = '07:00';
@@ -852,21 +621,24 @@ export class ProfileModalComponent implements OnInit, OnDestroy {
     'فوق‌العاده‌ای',
   ];
 
-  readonly skinTones = SKIN_TONE_OPTIONS;
-  readonly faceShapes = FACE_SHAPE_OPTIONS;
-  readonly hairStyles = HAIR_STYLE_OPTIONS;
-  readonly hairColors = HAIR_COLOR_OPTIONS;
-  readonly eyeShapes = EYE_SHAPE_OPTIONS;
-  readonly eyeColors = EYE_COLOR_OPTIONS;
-  readonly eyebrows = EYEBROW_OPTIONS;
-  readonly mouthExpressions = MOUTH_EXPRESSION_OPTIONS;
-  readonly lipColors = LIP_COLOR_OPTIONS;
-  readonly outfitStyles = OUTFIT_STYLE_OPTIONS;
-  readonly outfitColors = OUTFIT_COLOR_OPTIONS;
-  readonly accessories = ACCESSORY_OPTIONS;
+  // Settings & Privacy & BYOK
+  useLocalTtsOnly: boolean = false;
+  useCustomLlm: boolean = false;
+  customLlmBaseUrl: string = 'https://api.openai.com/v1';
+  customLlmApiKey: string = '';
+  customLlmModel: string = 'gpt-4o-mini';
+
+  // Backup status
+  backupMessage: string = '';
+  backupSuccess: boolean = false;
 
   private readonly avatarAutoSaveSubject = new Subject<AvatarCustomization>();
   private avatarAutoSaveSub?: Subscription;
+
+  @HostListener('window:keydown.escape')
+  handleEscape(): void {
+    this.closeModal();
+  }
 
   ngOnInit(): void {
     if (this.profile) {
@@ -877,10 +649,16 @@ export class ProfileModalComponent implements OnInit, OnDestroy {
       this.editAvatarConfig = sanitizeAvatarConfig(this.profile.avatar_config || this.themeService.customization());
       this.editCatchphrases = Array.isArray(this.profile.catchphrases) ? [...this.profile.catchphrases] : ['دمت گرم', 'بزن بریم'];
       this.editOccasions = Array.isArray(this.profile.occasions) ? [...this.profile.occasions] : [];
+      this.useLocalTtsOnly = this.profile.use_local_tts_only ?? this.ttsService.isLocalOnly();
+      this.useCustomLlm = !!this.profile.use_custom_llm;
+      this.customLlmBaseUrl = this.profile.custom_llm_base_url || 'https://api.openai.com/v1';
+      this.customLlmApiKey = this.profile.custom_llm_api_key || '';
+      this.customLlmModel = this.profile.custom_llm_model || 'gpt-4o-mini';
     } else {
       this.editAvatarConfig = sanitizeAvatarConfig(this.themeService.customization());
       this.editCatchphrases = ['دمت گرم', 'بزن بریم'];
       this.editOccasions = [];
+      this.useLocalTtsOnly = this.ttsService.isLocalOnly();
     }
 
     // Debounced automatic backend synchronization for avatar edits
@@ -889,7 +667,7 @@ export class ProfileModalComponent implements OnInit, OnDestroy {
       switchMap((config) => this.apiService.updateProfile({ avatar_config: config }))
     ).subscribe({
       next: () => {},
-      error: (err) => console.warn('Auto-save profile avatar to backend failed:', err),
+      error: (err) => console.warn('Auto-save profile avatar failed:', err),
     });
   }
 
@@ -902,6 +680,48 @@ export class ProfileModalComponent implements OnInit, OnDestroy {
     if (dialog && !dialog.open) {
       dialog.showModal();
     }
+  }
+
+  onAvatarChange(updated: AvatarCustomization): void {
+    this.editAvatarConfig = updated;
+    this.themeService.saveCustomization(updated);
+    this.avatarAutoSaveSubject.next(updated);
+  }
+
+  randomizeAvatar(): void {
+    this.editAvatarConfig = this.themeService.getRandomAvatar();
+    this.themeService.saveCustomization(this.editAvatarConfig);
+    this.avatarAutoSaveSubject.next(this.editAvatarConfig);
+  }
+
+  onTtsPrivacyToggle(): void {
+    this.ttsService.setLocalOnly(this.useLocalTtsOnly);
+  }
+
+  downloadBackup(): void {
+    this.apiService.downloadBackupFile();
+    this.backupSuccess = true;
+    this.backupMessage = 'فایل پشتیبان با موفقیت دانلود شد!';
+  }
+
+  onImportFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = reader.result as string;
+      const res = this.apiService.importBackup(content);
+      this.backupSuccess = res.success;
+      this.backupMessage = res.message;
+      if (res.success) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      }
+    };
+    reader.readAsText(file);
+    input.value = '';
   }
 
   onDatePicked(dateStr: string): void {
@@ -950,21 +770,6 @@ export class ProfileModalComponent implements OnInit, OnDestroy {
     this.editCatchphrases = this.editCatchphrases.filter((p) => p !== phrase);
   }
 
-  updateAvatarProp(changes: Partial<AvatarCustomization>): void {
-    this.editAvatarConfig = { ...this.editAvatarConfig, ...changes };
-    this.onAvatarConfigChanged();
-  }
-
-  randomizeAvatar(): void {
-    this.editAvatarConfig = this.themeService.getRandomAvatar();
-    this.onAvatarConfigChanged();
-  }
-
-  private onAvatarConfigChanged(): void {
-    this.themeService.saveCustomization(this.editAvatarConfig);
-    this.avatarAutoSaveSubject.next(this.editAvatarConfig);
-  }
-
   saveProfile(): void {
     this.isSaving.set(true);
 
@@ -976,14 +781,19 @@ export class ProfileModalComponent implements OnInit, OnDestroy {
       avatar_config: this.editAvatarConfig,
       catchphrases: this.editCatchphrases,
       occasions: this.editOccasions,
+      use_local_tts_only: this.useLocalTtsOnly,
+      use_custom_llm: this.useCustomLlm,
+      custom_llm_base_url: this.customLlmBaseUrl.trim(),
+      custom_llm_api_key: this.customLlmApiKey.trim(),
+      custom_llm_model: this.customLlmModel.trim(),
     };
 
     // Save to ThemeService and localStorage
     this.themeService.saveCustomization(this.editAvatarConfig);
+    this.ttsService.setLocalOnly(this.useLocalTtsOnly);
 
     this.apiService.updateProfile(changes).subscribe({
       next: (updatedProfile) => {
-        // Sync occasions to tasks immediately
         this.apiService.syncOccasions();
         this.isSaving.set(false);
         this.saved.emit(updatedProfile);
@@ -999,27 +809,19 @@ export class ProfileModalComponent implements OnInit, OnDestroy {
 
   regenerateGuidelines(): void {
     this.isRegenerating.set(true);
-    const mockLifestyle = {
+    const mockLifestyle = this.profile?.psychology_profile || {
       mainGoal: 'بهره‌وری و رشد فردی',
       stressLevel: 'متعادل',
       aiTone: 'دوست صمیمی و پرانرژی',
     };
 
     this.apiService
-      .setupProfile({
-        name: this.editName.trim() || 'کاربر',
-        wake_time: this.editWakeTime,
-        sleep_time: this.editSleepTime,
-        avatar_config: this.editAvatarConfig,
-        lifestyle_answers: mockLifestyle,
-        catchphrases: this.editCatchphrases,
-        occasions: this.editOccasions,
-      })
+      .generateAiGuidelines(this.editWakeTime, this.editSleepTime, mockLifestyle)
       .subscribe({
-        next: (res) => {
+        next: (guidelines) => {
           this.isRegenerating.set(false);
-          if (res.ai_guidelines) {
-            this.editGuidelines = res.ai_guidelines;
+          if (guidelines) {
+            this.editGuidelines = guidelines;
           }
         },
         error: (err) => {

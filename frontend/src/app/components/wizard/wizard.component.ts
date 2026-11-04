@@ -20,6 +20,7 @@ import {
 } from '../../models/task.model';
 import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.component';
 import { JalaliDatePickerModalComponent } from '../jalali-date-picker/jalali-date-picker-modal.component';
+import { AvatarEditorComponent } from '../avatar-editor/avatar-editor.component';
 
 export interface PsychQuestion {
   id: string;
@@ -32,7 +33,7 @@ export interface PsychQuestion {
 @Component({
   selector: 'app-wizard',
   standalone: true,
-  imports: [CommonModule, FormsModule, DynamicAvatarComponent, JalaliDatePickerModalComponent],
+  imports: [CommonModule, FormsModule, DynamicAvatarComponent, JalaliDatePickerModalComponent, AvatarEditorComponent],
   template: `
     <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-3 sm:p-4 selection:bg-purple-600 selection:text-white relative overflow-hidden" dir="rtl">
       <!-- Ambient Glow Orbs -->
@@ -360,79 +361,11 @@ export interface PsychQuestion {
                 </div>
               </div>
 
-              <!-- Skin Tone Selection -->
-              <div>
-                <span class="block text-xs font-bold text-slate-300 mb-1.5">۱. رنگ پوست:</span>
-                <div class="grid grid-cols-6 gap-1.5">
-                  @for (skin of skinTones; track skin.id) {
-                    <button
-                      type="button"
-                      (click)="avatarConfig.skinTone = skin.id"
-                      class="p-1 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer"
-                      [ngClass]="avatarConfig.skinTone === skin.id ? 'border-purple-400 bg-purple-950/40 ring-1 ring-purple-400' : 'border-slate-800 bg-slate-950/60'"
-                    >
-                      <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-slate-900 font-bold shadow" [style.background-color]="skin.hex">
-                        @if (avatarConfig.skinTone === skin.id) { ✓ }
-                      </span>
-                      <span class="text-[8px] text-slate-300 truncate w-full text-center">{{ skin.name }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <!-- Hair Style Selection -->
-              <div>
-                <span class="block text-xs font-bold text-slate-300 mb-1.5">۲. مدل مو:</span>
-                <div class="grid grid-cols-3 gap-1.5">
-                  @for (h of hairStyles; track h.id) {
-                    <button
-                      type="button"
-                      (click)="avatarConfig.hairStyle = h.id"
-                      class="p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center"
-                      [ngClass]="avatarConfig.hairStyle === h.id ? 'bg-purple-600/30 border-purple-500 text-white shadow-md' : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700'"
-                    >
-                      <span class="text-lg mb-0.5">{{ h.icon }}</span>
-                      <span class="text-[10px] font-bold truncate w-full">{{ h.label }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <!-- Outfit Style Selection -->
-              <div>
-                <span class="block text-xs font-bold text-slate-300 mb-1.5">۳. استایل لباس:</span>
-                <div class="grid grid-cols-3 gap-1.5">
-                  @for (outfit of outfitStyles; track outfit.id) {
-                    <button
-                      type="button"
-                      (click)="avatarConfig.outfitStyle = outfit.id"
-                      class="p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center"
-                      [ngClass]="avatarConfig.outfitStyle === outfit.id ? 'bg-purple-600/30 border-purple-500 text-white shadow-md' : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700'"
-                    >
-                      <span class="text-xl mb-0.5">{{ outfit.icon }}</span>
-                      <span class="text-[10px] font-bold truncate w-full">{{ outfit.label }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <!-- Accessories Selection -->
-              <div>
-                <span class="block text-xs font-bold text-slate-300 mb-1.5">۴. اکسسوری:</span>
-                <div class="grid grid-cols-4 gap-1.5">
-                  @for (acc of accessories.slice(0, 4); track acc.id) {
-                    <button
-                      type="button"
-                      (click)="avatarConfig.accessory = acc.id"
-                      class="p-2 rounded-xl border text-center transition cursor-pointer flex flex-col items-center"
-                      [ngClass]="avatarConfig.accessory === acc.id ? 'bg-purple-600/30 border-purple-500 text-white shadow-md' : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700'"
-                    >
-                      <span class="text-xl mb-0.5">{{ acc.icon }}</span>
-                      <span class="text-[10px] font-bold truncate w-full">{{ acc.label }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
+              <!-- Shared Avatar Editor Component -->
+              <app-avatar-editor
+                [customization]="avatarConfig"
+                (customizationChange)="avatarConfig = $event"
+              ></app-avatar-editor>
             </div>
           }
 
@@ -545,6 +478,10 @@ export class WizardComponent {
 
   // Step 5: Avatar Customization
   avatarConfig: AvatarCustomization = { ...DEFAULT_AVATAR_CUSTOMIZATION };
+
+  updateAvatarConfig(changes: Partial<AvatarCustomization>): void {
+    this.avatarConfig = { ...this.avatarConfig, ...changes };
+  }
 
   readonly skinTones = SKIN_TONE_OPTIONS;
   readonly faceShapes = FACE_SHAPE_OPTIONS;

@@ -81,7 +81,7 @@ import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.compone
               @if (recorder.isRecording()) {
                 <div class="bg-slate-950/60 border border-white/10 rounded-2xl p-4 min-h-[90px] max-h-[140px] overflow-y-auto text-right backdrop-blur-md shadow-inner flex flex-col justify-between">
                   <p class="text-xs sm:text-sm text-slate-100 font-medium leading-relaxed">
-                    {{ recorder.recognizedText() || 'در حال شنیدن صدای شما... برنامه‌ت رو بگو (مثلاً: فردا ساعت ۱۰ برم ورزش و بعدش جلسه کاری)' }}
+                    {{ recorder.recognizedText() || (recorder.isSafari() ? 'در حال ضبط صدا... (در سافاری می‌توانید از دکمه میکروفون کیبورد آیفون نیز استفاده کنید)' : 'در حال شنیدن صدای شما... برنامه‌ت رو بگو (مثلاً: فردا ساعت ۱۰ برم ورزش و بعدش جلسه کاری)') }}
                   </p>
                   <div class="flex items-center justify-end gap-1 text-[10px] text-purple-400 mt-2 font-mono">
                     <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
@@ -100,9 +100,15 @@ import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.compone
                     class="w-full bg-slate-950/80 border border-purple-500/40 rounded-2xl p-3 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/30 leading-relaxed shadow-inner"
                     placeholder="متن برنامه خود را اینجا بنویسید یا ویرایش کنید..."
                   ></textarea>
-                  <p class="text-[10px] text-slate-400">
-                    💡 نکته: می‌تونی دکمه تایید رو بزنی یا فقط بگی <span class="text-purple-300 font-bold">«تایید»</span>!
-                  </p>
+                  @if (!reviewText.trim()) {
+                    <div class="p-2.5 rounded-xl bg-amber-950/50 border border-amber-500/30 text-[11px] text-amber-200 leading-relaxed">
+                      💡 <strong>راهنما برای سافاری / آیفون:</strong> وب‌کیت سافاری از تبدیل خودکار وب به متن فارسی پشتیبانی نمی‌کند. کافیست در کادر بالا متن را بنویسید یا از <strong>میکروفون کیبورد آیفون (دیکته صوتی فارسی)</strong> استفاده فرمایید.
+                    </div>
+                  } @else {
+                    <p class="text-[10px] text-slate-400">
+                      💡 نکته: می‌تونی دکمه تایید رو بزنی یا فقط بگی <span class="text-purple-300 font-bold">«تایید»</span>!
+                    </p>
+                  }
                 </div>
               }
             </div>
@@ -251,7 +257,7 @@ export class VoiceInputComponent {
 
       this.lastRecordedBlob = result.blob;
       const recognized = (result.transcript || this.recorder.recognizedText() || '').trim();
-      this.reviewText = recognized || 'کلاس فیزیک ساعت ۱۰ صبح';
+      this.reviewText = recognized;
       this.isReviewing.set(true);
 
       // Check for voice confirmation (e.g. if the user concluded by saying "تایید")

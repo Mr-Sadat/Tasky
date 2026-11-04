@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, signal } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnInit, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -25,6 +25,9 @@ import {
       <div
         class="w-full max-w-sm rounded-3xl bg-slate-900/90 border border-white/15 p-5 shadow-2xl backdrop-blur-2xl flex flex-col gap-3.5 relative overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] animate-scale-up"
         (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="datePickerModalTitle"
       >
         <!-- Ambient Glow -->
         <div class="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-purple-600/20 blur-2xl pointer-events-none"></div>
@@ -35,7 +38,7 @@ import {
           <div class="flex items-center gap-2">
             <span class="text-lg">📅</span>
             <div>
-              <h4 class="text-xs font-bold text-white">انتخاب تاریخ تقویم شمسی</h4>
+              <h4 id="datePickerModalTitle" class="text-xs font-bold text-white">انتخاب تاریخ تقویم شمسی</h4>
               <p class="text-[10px] text-purple-300">{{ selectedDisplay() }}</p>
             </div>
           </div>
@@ -174,6 +177,11 @@ export class JalaliDatePickerModalComponent implements OnInit {
   readonly selectedDisplay = signal<string>('');
 
   includeYear: boolean = false; // Default: MM-DD for recurring occasions
+
+  @HostListener('window:keydown.escape')
+  handleEscape(): void {
+    this.closeModal();
+  }
 
   ngOnInit(): void {
     const [todayY, todayM, todayD] = getTodayJalali();

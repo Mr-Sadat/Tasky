@@ -95,10 +95,47 @@ export function getJalaliMonthStartWeekday(jy: number, jm: number): number {
 }
 
 /**
+ * Converts a Date object to local ISO string "YYYY-MM-DD" based on local timezone, avoiding UTC shifts
+ */
+export function toLocalIsoDate(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Safely parses a Date or "YYYY-MM-DD" string into a Date object at local midnight (00:00:00 local time).
+ * Fixes JavaScript's UTC midnight parsing of ISO date strings.
+ */
+export function parseLocalIsoDate(dateInput?: Date | string): Date {
+  if (!dateInput) return new Date();
+  if (dateInput instanceof Date) return dateInput;
+  if (typeof dateInput === 'string') {
+    const trimmed = dateInput.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const [y, m, d] = trimmed.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    return new Date(trimmed);
+  }
+  return new Date();
+}
+
+/**
+ * Safely adds days to a date string or object and returns local ISO (YYYY-MM-DD)
+ */
+export function addDaysToIso(dateInput: Date | string, days: number): string {
+  const d = parseLocalIsoDate(dateInput);
+  d.setDate(d.getDate() + days);
+  return toLocalIsoDate(d);
+}
+
+/**
  * Returns formatted Jalali date string e.g. "1405-08-12" from Date object or ISO string
  */
 export function getJalaliDateStr(dateInput?: Date | string): string {
-  const d = dateInput instanceof Date ? dateInput : (dateInput ? new Date(dateInput) : new Date());
+  const d = parseLocalIsoDate(dateInput);
   const [jy, jm, jd] = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
   return `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')}`;
 }
@@ -107,7 +144,7 @@ export function getJalaliDateStr(dateInput?: Date | string): string {
  * Returns human-readable Persian date e.g. "۱۲ آبان ۱۴۰۵"
  */
 export function getJalaliDisplayStr(dateInput?: Date | string): string {
-  const d = dateInput instanceof Date ? dateInput : (dateInput ? new Date(dateInput) : new Date());
+  const d = parseLocalIsoDate(dateInput);
   const [jy, jm, jd] = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
   const monthName = PERSIAN_MONTHS[jm - 1] || '';
   return `${jd} ${monthName} ${jy}`;
@@ -117,19 +154,15 @@ export function getJalaliDisplayStr(dateInput?: Date | string): string {
  * Returns Persian weekday name e.g. "سه‌شنبه"
  */
 export function getJalaliDayNameStr(dateInput?: Date | string): string {
-  const d = dateInput instanceof Date ? dateInput : (dateInput ? new Date(dateInput) : new Date());
+  const d = parseLocalIsoDate(dateInput);
   return PERSIAN_WEEKDAYS[d.getDay()] || '';
 }
 
 /**
- * Returns today's ISO string (YYYY-MM-DD)
+ * Returns today's ISO string (YYYY-MM-DD) in local time
  */
 export function getTodayIso(): string {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return toLocalIsoDate(new Date());
 }
 
 /**

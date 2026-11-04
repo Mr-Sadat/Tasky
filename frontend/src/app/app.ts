@@ -15,7 +15,7 @@ import { DailyRecapModalComponent } from './components/daily-recap-modal/daily-r
 import { PanicModalComponent } from './components/panic-modal/panic-modal.component';
 import { FocusModalComponent } from './components/focus-modal/focus-modal.component';
 import { CalendarModalComponent } from './components/calendar-modal/calendar-modal.component';
-import { getJalaliDisplayStr } from './utils/jalali';
+import { getJalaliDisplayStr, getTodayIso, toLocalIsoDate, addDaysToIso } from './utils/jalali';
 
 @Component({
   selector: 'app-root',
@@ -59,7 +59,7 @@ export class App implements OnInit {
   readonly isStoryModalOpen = signal<boolean>(false);
   readonly isPanicModalOpen = signal<boolean>(false);
   readonly isPanicProcessing = signal<boolean>(false);
-  readonly breakingDownTaskId = signal<number | null>(null);
+  readonly breakingDownTaskId = signal<string | number | null>(null);
   readonly focusingTask = signal<Task | null>(null);
   readonly isBriefingLoading = signal<boolean>(false);
   readonly isCheckingProfile = signal<boolean>(true);
@@ -77,7 +77,7 @@ export class App implements OnInit {
    */
   readonly activeTask = computed(() => {
     const list = this.tasks();
-    const todayIso = new Date().toISOString().split('T')[0];
+    const todayIso = getTodayIso();
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -99,7 +99,7 @@ export class App implements OnInit {
    */
   readonly nextTask = computed(() => {
     const list = this.tasks();
-    const todayIso = new Date().toISOString().split('T')[0];
+    const todayIso = getTodayIso();
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -184,7 +184,7 @@ export class App implements OnInit {
   }
 
   onCalendarDateSelected(isoDate: string): void {
-    const todayIso = new Date().toISOString().split('T')[0];
+    const todayIso = getTodayIso();
     this.selectedDate.set(isoDate === todayIso ? 'today' : isoDate);
     this.loadTasks(this.selectedDate());
     this.isCalendarModalOpen.set(false);
@@ -351,7 +351,7 @@ export class App implements OnInit {
       tabs.push({
         label: 'فردا',
         subLabel: tomorrowMonthDay,
-        dateValue: tomorrow.toISOString().split('T')[0],
+        dateValue: toLocalIsoDate(tomorrow),
       });
 
       // 3. Next 3 upcoming days
@@ -365,7 +365,7 @@ export class App implements OnInit {
           day: 'numeric',
           month: 'short',
         }).format(nextDate);
-        const iso = nextDate.toISOString().split('T')[0];
+        const iso = toLocalIsoDate(nextDate);
 
         tabs.push({
           label: weekday,
@@ -492,7 +492,7 @@ export class App implements OnInit {
     // 3. Add new tasks and reschedule notifications
     if (res.tasks && res.tasks.length > 0) {
       const createdTask = res.tasks[0];
-      const todayIso = new Date().toISOString().split('T')[0];
+      const todayIso = getTodayIso();
       if (createdTask.date) {
         this.selectedDate.set(createdTask.date === todayIso ? 'today' : createdTask.date);
       }
@@ -511,14 +511,15 @@ export class App implements OnInit {
 
     this.apiService.toggleTaskCompletion(event.task.id, event.isCompleted).subscribe({
       next: (updated) => {
+        const profile = this.apiService.getStoredProfile();
+        if (profile) {
+          this.userProfile.set(profile);
+        }
         if (updated.is_completed) {
           this.avatarState.set('happy');
           this.avatarVoiceReply.set('آفرین! یک قدم به اهداف امروزت نزدیک‌تر شدی 🎉');
           this.ttsService.speak('آفرین! یک قدم به اهداف امروزت نزدیک‌تر شدی');
-          this.userProfile.update((p) => p ? { ...p, xp: (p.xp || 0) + 15 } : p);
           this.showToast(`+۱۵ امتیاز XP برای تکمیل «${event.task.title}» دریافت کردی! ⚡`);
-        } else {
-          this.userProfile.update((p) => p ? { ...p, xp: Math.max(0, (p.xp || 0) - 15) } : p);
         }
       },
       error: (err) => {
@@ -559,9 +560,7 @@ export class App implements OnInit {
         }
       });
     } else if (toTomorrow) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowIso = tomorrow.toISOString().split('T')[0];
+      const tomorrowIso = addDaysToIso(task.date || getTodayIso(), 1);
 
       // Optimistic update
       this.tasks.update((current) =>

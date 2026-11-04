@@ -1,8 +1,9 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Task, UserProfile } from '../../models/task.model';
 import { ThemeService, THEME_PRESETS } from '../../services/theme.service';
 import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.component';
+import { getTodayIso } from '../../utils/jalali';
 
 @Component({
   selector: 'app-daily-recap-modal',
@@ -19,6 +20,9 @@ import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.compone
       <div 
         class="w-full max-w-sm flex flex-col items-center gap-3 relative my-auto"
         (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dailyRecapModalTitle"
       >
         <!-- Story Card (9:16 Aspect Ratio) -->
         <div 
@@ -37,7 +41,7 @@ import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.compone
             <div class="flex items-center gap-2">
               <span class="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center text-sm shadow">✨</span>
               <div>
-                <h3 class="text-xs font-black tracking-wider text-purple-100 uppercase">تَسکی | Tasky</h3>
+                <h3 id="dailyRecapModalTitle" class="text-xs font-black tracking-wider text-purple-100 uppercase">تَسکی | Tasky</h3>
                 <p class="text-[9px] text-purple-200/80">کارنامه روزانه من</p>
               </div>
             </div>
@@ -164,6 +168,11 @@ export class DailyRecapModalComponent {
   @Input() formattedDate: string = 'امروز';
   @Output() close = new EventEmitter<void>();
   @Output() toast = new EventEmitter<string>();
+
+  @HostListener('window:keydown.escape')
+  handleEscape(): void {
+    this.close.emit();
+  }
 
   get totalTasksCount(): number {
     return this.tasks.length;
@@ -427,7 +436,7 @@ export class DailyRecapModalComponent {
       const dataUrl = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = dataUrl;
-      a.download = `tasky-recap-${new Date().toISOString().split('T')[0]}.png`;
+      a.download = `tasky-recap-${getTodayIso()}.png`;
       a.click();
 
       this.toast.emit('تصویر استوری با کیفیت بالا دانلود شد! 📸✨');

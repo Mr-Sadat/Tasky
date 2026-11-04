@@ -20,6 +20,9 @@ export class AudioRecorderService {
   readonly durationSeconds = signal<number>(0);
   readonly recordingError = signal<string | null>(null);
   readonly recognizedText = signal<string>('');
+  readonly isSafari = signal<boolean>(
+    typeof navigator !== 'undefined' && /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+  );
 
   /**
    * Check if audio recording is supported in the current browser.
@@ -50,23 +53,34 @@ export class AudioRecorderService {
     }
 
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        }
-      });
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
+      } catch {
+        // Fallback for Safari / iOS mobile where complex constraints can throw OverconstrainedError
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
 
-      // Pick best supported MIME type
-      let mimeType = 'audio/webm;codecs=opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        if (MediaRecorder.isTypeSupported('audio/webm')) {
-          mimeType = 'audio/webm';
-        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else {
-          mimeType = '';
+      // Pick best supported MIME type (Safari prefers mp4/aac, Chrome prefers webm)
+      let mimeType = '';
+      if (typeof (window as any).MediaRecorder?.isTypeSupported === 'function') {
+        const candidates = [
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/mp4',
+          'audio/aac',
+          'audio/ogg'
+        ];
+        for (const cand of candidates) {
+          if (MediaRecorder.isTypeSupported(cand)) {
+            mimeType = cand;
+            break;
+          }
         }
       }
 
@@ -82,13 +96,14 @@ export class AudioRecorderService {
       this.mediaRecorder.start(250);
       this.isRecording.set(true);
 
-      // Start Web Speech Recognition if available (Chrome, Edge, Android)
+      // Start Web Speech Recognition if available
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         try {
           this.recognition = new SpeechRecognition();
           this.recognition.lang = 'fa-IR';
-          this.recognition.continuous = true;
+          // Safari does NOT support continuous recognition and aborts
+          this.recognition.continuous = !this.isSafari();
           this.recognition.interimResults = true;
           let fullTranscript = '';
 

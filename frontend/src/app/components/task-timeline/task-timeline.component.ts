@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.model';
+import { getTodayIso } from '../../utils/jalali';
 
 @Component({
   selector: 'app-task-timeline',
@@ -305,7 +306,7 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
   @Input() tasks: Task[] = [];
   @Input() selectedDate: string = 'today';
   @Input() dateTabs: JalaliDateTab[] = [];
-  @Input() breakingDownTaskId: number | null = null;
+  @Input() breakingDownTaskId: string | number | null = null;
   
   @Output() dateSelected = new EventEmitter<string>();
   @Output() toggleTask = new EventEmitter<{ task: Task; isCompleted: boolean }>();
@@ -355,7 +356,7 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
   shouldShowDateBadge(task: Task): boolean {
     if (this.selectedDate === 'all') return true;
     if (!task.date) return false;
-    const todayIso = new Date().toISOString().split('T')[0];
+    const todayIso = getTodayIso();
     return task.date !== todayIso;
   }
 
@@ -384,7 +385,7 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
 
   isTaskActive(task: Task): boolean {
     if (task.is_completed || !task.scheduled_time) return false;
-    const todayIso = new Date().toISOString().split('T')[0];
+    const todayIso = getTodayIso();
     if (task.date && task.date !== todayIso) return false;
 
     const parts = task.scheduled_time.split(':');

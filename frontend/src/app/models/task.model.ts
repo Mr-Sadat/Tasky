@@ -5,7 +5,7 @@ export type AvatarMood = 'happy' | 'serious' | 'supportive' | 'excited';
 export type AvatarState = 'idle' | 'listening' | 'thinking' | AvatarMood;
 
 export interface Task {
-  id: number;
+  id: string | number;
   title: string;
   scheduled_time: string;
   duration_minutes: number;
@@ -111,8 +111,28 @@ export interface UserProfile {
   psychology_profile?: { [key: string]: any };
   xp?: number;
   streak_days?: number;
+  last_streak_date?: string;
+  previous_streak_date?: string;
+  // Optional BYOK (Bring Your Own Key) for External LLM Proxy
+  custom_llm_api_key?: string;
+  custom_llm_base_url?: string;
+  custom_llm_model?: string;
+  use_custom_llm?: boolean;
+  // Privacy preference for TTS
+  use_local_tts_only?: boolean;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface TaskyBackupData {
+  schemaVersion: number;
+  exportedAt: string;
+  profile: UserProfile | null;
+  tasks: Task[];
+  avatarCustomization?: AvatarCustomization | null;
+  dismissedOccasions?: string[];
+  completedOccasions?: string[];
+  theme?: string;
 }
 
 export interface ProfileSetupPayload {

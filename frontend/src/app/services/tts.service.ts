@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 
 const STORAGE_MUTED_KEY = 'tasky_tts_muted';
 const STORAGE_TTS_KEY = 'tasky_tts_api_key';
+const STORAGE_LOCAL_ONLY_KEY = 'tasky_tts_local_only';
 
 @Injectable({
   providedIn: 'root'
@@ -10,6 +11,7 @@ export class TtsService {
   readonly isMuted = signal<boolean>(false);
   readonly isSpeaking = signal<boolean>(false);
   readonly isSupported = signal<boolean>(true);
+  readonly isLocalOnly = signal<boolean>(false);
 
   private availableVoices: SpeechSynthesisVoice[] = [];
   private currentAudio: HTMLAudioElement | null = null;
@@ -30,8 +32,11 @@ export class TtsService {
       try {
         const stored = localStorage.getItem(STORAGE_MUTED_KEY);
         this.isMuted.set(stored === 'true');
+        const localOnlyStored = localStorage.getItem(STORAGE_LOCAL_ONLY_KEY);
+        this.isLocalOnly.set(localOnlyStored === 'true');
       } catch {
         this.isMuted.set(false);
+        this.isLocalOnly.set(false);
       }
 
       if ('speechSynthesis' in window) {
@@ -41,6 +46,13 @@ export class TtsService {
         }
       }
     }
+  }
+
+  setLocalOnly(enabled: boolean): void {
+    this.isLocalOnly.set(enabled);
+    try {
+      localStorage.setItem(STORAGE_LOCAL_ONLY_KEY, String(enabled));
+    } catch {}
   }
 
   private loadVoices(): void {
@@ -80,6 +92,12 @@ export class TtsService {
     if (!cleanText) return;
 
     this.stop();
+
+    // If user opts for strict local privacy, bypass external neural TTS completely
+    if (this.isLocalOnly()) {
+      this.fallbackBrowserSpeech(cleanText);
+      return;
+    }
 
     try {
       const apiKey = localStorage.getItem(STORAGE_TTS_KEY) || this.defaultApiKey;

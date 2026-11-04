@@ -15,7 +15,7 @@ export class NotificationService {
   readonly scheduledCount = signal<number>(0);
   readonly showPermissionBanner = signal<boolean>(false);
 
-  private scheduledTimers: Map<number, number> = new Map();
+  private scheduledTimers: Map<string | number, any> = new Map();
 
   constructor() {
     this.checkSupportAndPermission();
@@ -194,18 +194,23 @@ export class NotificationService {
   private dispatchNativeNotification(title: string, body: string, tag: string = 'tasky-notification'): boolean {
     try {
       if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-        const notification = new Notification(title, {
+        const options: NotificationOptions = {
           body,
           tag,
-          icon: '/favicon.ico',
+          icon: 'favicon.ico',
           dir: 'rtl',
           lang: 'fa',
-        });
-
-        notification.onclick = () => {
-          window.focus();
-          notification.close();
         };
+
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then((reg) => {
+            reg.showNotification(title, options);
+          }).catch(() => {
+            this.fallbackNotification(title, options);
+          });
+        } else {
+          this.fallbackNotification(title, options);
+        }
 
         return true;
       }
@@ -214,6 +219,16 @@ export class NotificationService {
       console.warn('Native Notification failed:', e);
       return false;
     }
+  }
+
+  private fallbackNotification(title: string, options: NotificationOptions): void {
+    try {
+      const notification = new Notification(title, options);
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    } catch {}
   }
 
   clearAllTimers(): void {

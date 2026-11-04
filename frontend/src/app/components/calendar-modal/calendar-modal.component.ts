@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnInit, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
@@ -40,6 +40,9 @@ interface DayGridItem {
       <div
         class="w-full max-w-xl rounded-3xl bg-slate-900/90 border border-white/15 p-4 sm:p-6 shadow-2xl backdrop-blur-2xl flex flex-col gap-4 relative overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] my-auto max-h-[92vh] overflow-y-auto animate-scale-up"
         (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="calendarModalTitle"
       >
         <!-- Background Ambient Glow -->
         <div class="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-purple-600/20 blur-3xl pointer-events-none"></div>
@@ -52,7 +55,7 @@ interface DayGridItem {
               🗓️
             </div>
             <div>
-              <h3 class="text-sm sm:text-base font-bold text-white">تقویم جامع شمسی و مناسبت‌ها</h3>
+              <h3 id="calendarModalTitle" class="text-sm sm:text-base font-bold text-white">تقویم جامع شمسی و مناسبت‌ها</h3>
               <p class="text-[11px] text-slate-400">مرور ماهانه، مناسبت‌های ایران و جهان و برنامه‌ریزی هر تاریخ دلخواه</p>
             </div>
           </div>
@@ -330,6 +333,11 @@ export class CalendarModalComponent implements OnInit {
   isAddingOccasion: boolean = false;
   newOccasionTitle: string = '';
   newOccasionIcon: string = '🎂';
+
+  @HostListener('window:keydown.escape')
+  handleEscape(): void {
+    this.closeModal();
+  }
 
   ngOnInit(): void {
     const [todayY, todayM] = getTodayJalali();
