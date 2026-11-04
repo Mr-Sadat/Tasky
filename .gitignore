@@ -11,7 +11,6 @@ ENV/
 # Node / Angular
 node_modules/
 dist/
-docs/
 .angular/
 
 # Logs
