@@ -38,7 +38,7 @@ interface DayGridItem {
     >
       <!-- Glassmorphic Calendar Container -->
       <div
-        class="w-full max-w-xl rounded-3xl bg-slate-900/90 border border-white/15 p-4 sm:p-6 shadow-2xl backdrop-blur-2xl flex flex-col gap-4 relative overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] my-auto max-h-[92vh] overflow-y-auto animate-scale-up"
+        class="w-full max-w-xl rounded-2xl bg-[#1A1D2B] border border-white/[0.08] p-4 sm:p-6 shadow-2xl backdrop-blur-2xl flex flex-col gap-4 relative overflow-hidden my-auto max-h-[92vh] overflow-y-auto animate-scale-up"
         (click)="$event.stopPropagation()"
         role="dialog"
         aria-modal="true"

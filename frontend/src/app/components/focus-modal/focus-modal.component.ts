@@ -62,7 +62,7 @@ const PERSIAN_AFFIRMATIONS = [
 
       <!-- Main Focus Card Container -->
       <div
-        class="relative w-full max-w-md rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-white/10 shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.15)] p-5 sm:p-6 overflow-hidden flex flex-col justify-between max-h-[92vh] overflow-y-auto"
+        class="relative w-full max-w-md rounded-2xl bg-[#1A1D2B] backdrop-blur-2xl border border-white/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.8)] p-5 sm:p-6 overflow-hidden flex flex-col justify-between max-h-[92vh] overflow-y-auto"
         (click)="$event.stopPropagation()"
         role="dialog"
         aria-modal="true"

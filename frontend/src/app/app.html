@@ -2,25 +2,24 @@
   <!-- Personalized Onboarding Wizard -->
   <app-wizard (completed)="onWizardCompleted($event)"></app-wizard>
 } @else {
-  <main class="min-h-screen bg-[#090a16] text-slate-100 flex flex-col justify-between selection:bg-purple-600 selection:text-white relative overflow-x-hidden" dir="rtl">
-    <!-- Ambient Background Radial Glow Orbs -->
-    <div class="fixed -top-24 -right-24 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none -z-10"></div>
-    <div class="fixed -bottom-24 -left-24 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none -z-10"></div>
-    <div class="fixed top-[35%] left-[25%] w-80 h-80 bg-pink-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+  <main class="min-h-screen bg-[#0F111A] text-slate-100 flex flex-col justify-between selection:bg-purple-600 selection:text-white relative overflow-x-hidden" dir="rtl">
+    <!-- Subtle Background Ambient Glow (Controlled & Non-distracting) -->
+    <div class="fixed -top-24 -right-24 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div class="fixed -bottom-24 -left-24 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
 
-    <!-- Centered Mobile-First App Wrapper -->
+    <!-- Centered Mobile-First App Container -->
     <div class="w-full max-w-md mx-auto min-h-screen flex flex-col justify-between px-4 pt-5 pb-28 sm:px-5 relative">
       
       <!-- ======================================================== -->
-      <!-- TOP HEADER (Bilingual & Persian RTL)                     -->
+      <!-- TOP HEADER (Pure RTL Persian Typography)                 -->
       <!-- ======================================================== -->
       <header class="flex items-center justify-between pb-3 shrink-0">
         <!-- Date & User Greeting -->
         <div>
-          <p class="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400">
+          <p class="text-xs text-slate-400 font-medium">
             {{ formattedTodayDate() }}
           </p>
-          <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-1.5 mt-0.5">
+          <h1 class="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-1.5 mt-0.5">
             <span>سلام، {{ userProfile()?.name || 'الکس' }}</span>
             <span class="text-amber-300">✨</span>
           </h1>
@@ -28,36 +27,36 @@
 
         <!-- Top Status Indicators & Quick Actions -->
         <div class="flex items-center gap-2">
-          <!-- Streak Counter Pill (🔥 12) -->
+          <!-- Streak Counter Pill -->
           <div 
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#14162c] border border-white/10 text-xs font-black text-amber-300 shadow-md select-none interactive-spring"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1A1D2B] border border-white/[0.08] text-xs font-bold text-amber-300 shadow-sm select-none interactive-spring"
             title="روزهای استمرار و فعالیت مداوم"
           >
             <span class="text-sm">🔥</span>
-            <span>{{ streakDays() }}</span>
+            <span>{{ toPersianDigits(streakDays()) }}</span>
           </div>
 
-          <!-- Notification Bell with Pink Dot Indicator -->
+          <!-- Notification Bell with Dot Indicator -->
           <button
             type="button"
             (click)="testNotification()"
-            class="w-10 h-10 rounded-full bg-[#14162c] border border-white/10 hover:border-pink-500/40 text-slate-300 hover:text-white flex items-center justify-center relative shadow-md transition cursor-pointer interactive-spring select-none"
-            title="اعلان‌ها و یادآورهای هوشمند (کلیک برای تست)"
+            class="w-10 h-10 rounded-full bg-[#1A1D2B] border border-white/[0.08] hover:border-pink-500/40 text-slate-300 hover:text-white flex items-center justify-center relative shadow-sm transition cursor-pointer interactive-spring select-none"
+            title="اعلان‌ها و یادآورهای هوشمند"
             aria-label="اعلان‌ها"
           >
             <svg class="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path stroke-linecap="round" stroke-linejoin="round" d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
-            <!-- Glowing Pink Dot Indicator -->
-            <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-pink-500 shadow-[0_0_6px_#ec4899]"></span>
+            <!-- Pink Dot Indicator -->
+            <span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#DB2777]"></span>
           </button>
         </div>
       </header>
 
       <!-- Toast Notification -->
       @if (successToast()) {
-        <div class="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-emerald-950/95 border border-emerald-500/40 text-emerald-200 text-xs font-bold shadow-2xl backdrop-blur-md animate-bounce flex items-center gap-2">
+        <div class="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-emerald-950/95 border border-emerald-500/40 text-emerald-200 text-xs font-semibold shadow-2xl backdrop-blur-md animate-bounce flex items-center gap-2">
           <span>✓</span>
           <span>{{ successToast() }}</span>
         </div>
@@ -82,33 +81,33 @@
 
           <!-- 1. TASKY IS ONLINE BANNER -->
           <div 
-            class="p-4 rounded-3xl bg-[#14162c]/90 border border-white/10 flex items-center justify-between shadow-xl backdrop-blur-xl relative overflow-hidden group cursor-pointer hover:border-purple-500/40 transition interactive-spring"
+            class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] flex items-center justify-between shadow-lg backdrop-blur-xl relative overflow-hidden group cursor-pointer hover:border-purple-500/30 transition interactive-spring"
             (click)="playDailyBriefing()"
-            title="کلیک برای پخش خلاصه صوتی روز"
+            title="پخش خلاصه صوتی رادیویی روز"
           >
-            <!-- Cute Companion Mascot Avatar with Green Online Dot -->
+            <!-- Mascot with Online Dot -->
             <div class="flex items-center gap-3.5 min-w-0">
               <div class="shrink-0">
-                <app-tasky-mascot [size]="52" badge="online"></app-tasky-mascot>
+                <app-tasky-mascot [size]="50" badge="online"></app-tasky-mascot>
               </div>
 
               <!-- Text Info -->
               <div class="min-w-0">
-                <div class="flex items-center gap-1.5 text-emerald-400 text-[10px] sm:text-[11px] font-black uppercase tracking-wider">
+                <div class="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
                   <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span>تَسکی آنلاین است (TASKY IS ONLINE)</span>
+                  <span>تَسکی آنلاین و فعال است</span>
                 </div>
-                <h3 class="text-sm sm:text-base font-extrabold text-white truncate mt-0.5">
+                <h3 class="text-sm sm:text-base font-bold text-white truncate mt-0.5">
                   آماده‌ای برای جریان دادن به روزت؟
                 </h3>
-                <p class="text-[11px] text-slate-400 truncate">
-                  در بازه اوج انرژی روزانه‌ات هستی (High-energy window)
+                <p class="text-xs text-slate-400 truncate">
+                  در بازه اوج تمرکز و انرژی روزانه هستی
                 </p>
               </div>
             </div>
 
             <!-- Arrow Action Button -->
-            <div class="w-8 h-8 rounded-xl bg-white/5 group-hover:bg-purple-600/30 flex items-center justify-center text-slate-400 group-hover:text-purple-300 transition shrink-0">
+            <div class="w-8 h-8 rounded-xl bg-white/5 group-hover:bg-purple-600/20 flex items-center justify-center text-slate-400 group-hover:text-purple-300 transition shrink-0">
               <svg class="w-4 h-4 rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
@@ -118,12 +117,12 @@
           <!-- 2. QUICK CAPTURE CARD -->
           <div 
             (click)="openVoiceCapture()"
-            class="p-3.5 rounded-2xl bg-[#14162c]/90 border border-white/10 hover:border-pink-500/40 flex items-center justify-between cursor-pointer transition shadow-lg backdrop-blur-xl group interactive-spring select-none"
-            title="ضربه بزنید تا هوش مصنوعی به صدای شما گوش دهد"
+            class="p-3.5 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] hover:border-pink-500/30 flex items-center justify-between cursor-pointer transition shadow-md backdrop-blur-xl group interactive-spring select-none"
+            title="ثبت صوتی هوشمند"
           >
             <div class="flex items-center gap-3 min-w-0">
               <!-- Gradient Audio Waveform Square -->
-              <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-pink-500 via-fuchsia-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-pink-500/30 shrink-0">
+              <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#7C3AED] to-[#DB2777] flex items-center justify-center text-white shadow-sm shrink-0">
                 <div class="flex items-center justify-center gap-0.5">
                   <span class="w-0.5 h-3.5 bg-white rounded-full animate-eq-1"></span>
                   <span class="w-0.5 h-5 bg-white rounded-full animate-eq-2"></span>
@@ -134,18 +133,18 @@
 
               <!-- Quick Capture Text -->
               <div class="min-w-0">
-                <span class="text-[10px] font-black uppercase tracking-wider text-pink-400 block">
-                  ثبت سریع صوتی (QUICK CAPTURE)
+                <span class="text-xs font-semibold text-pink-400 block">
+                  ثبت سریع با صوت
                 </span>
-                <span class="text-xs sm:text-sm font-extrabold text-white block truncate">
+                <span class="text-sm font-bold text-white block truncate">
                   هوش مصنوعی آماده شنیدن است
                 </span>
               </div>
             </div>
 
-            <!-- TAP Pill Label -->
-            <span class="text-[11px] font-black tracking-widest uppercase text-slate-400 group-hover:text-pink-300 transition px-2 py-1 rounded-lg bg-white/5 shrink-0">
-              لمس کنید (TAP)
+            <!-- Action Pill -->
+            <span class="text-xs font-medium text-slate-400 group-hover:text-pink-300 transition px-2.5 py-1 rounded-full bg-white/5 shrink-0">
+              شروع صحبت
             </span>
           </div>
 
@@ -154,11 +153,11 @@
             <!-- Section Header -->
             <div class="flex items-center justify-between px-1">
               <div>
-                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                  روز شما (YOUR DAY)
+                <span class="text-xs text-slate-400 font-medium block">
+                  روز شما
                 </span>
-                <h2 class="text-lg font-extrabold text-white tracking-tight">
-                  ریتم امروز (Today's rhythm)
+                <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
+                  ریتم امروز
                 </h2>
               </div>
 
@@ -166,7 +165,7 @@
               <button
                 type="button"
                 (click)="toggleShowAllTimeline()"
-                class="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer transition select-none"
+                class="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer transition select-none"
               >
                 <span>{{ showAllTimeline() ? 'بستن لیست' : 'مشاهده همه' }}</span>
                 <span class="text-sm">›</span>
@@ -176,16 +175,16 @@
             <!-- GRID OF 3 RHYTHM CARDS -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               
-              <!-- CARD A: TODAY'S FOCUS (Large Card) -->
-              <div class="p-4 rounded-3xl bg-[#14162c]/90 border border-white/10 shadow-xl backdrop-blur-xl flex flex-col justify-between space-y-4">
+              <!-- CARD A: TODAY'S FOCUS -->
+              <div class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-lg backdrop-blur-xl flex flex-col justify-between space-y-4">
                 <!-- Card Header -->
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-1.5">
-                    <div class="w-7 h-7 rounded-xl bg-purple-950/80 border border-purple-500/40 text-purple-300 flex items-center justify-center text-xs">
+                    <div class="w-7 h-7 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-300 flex items-center justify-center text-xs">
                       ⚡
                     </div>
-                    <span class="text-[10px] sm:text-[11px] font-black uppercase text-purple-300">
-                      ۳ تسک کانون تمرکز
+                    <span class="text-xs font-bold text-purple-300">
+                      ۳ کانون تمرکز
                     </span>
                   </div>
                   <span class="text-slate-400 text-sm tracking-widest">•••</span>
@@ -194,15 +193,15 @@
                 <!-- Donut Progress Ring & Title -->
                 <div class="flex items-center justify-between gap-3">
                   <div>
-                    <h3 class="text-base sm:text-lg font-black text-white">
+                    <h3 class="text-base font-bold text-white">
                       تمرکز امروز
                     </h3>
-                    <p class="text-[11px] text-slate-400 leading-tight mt-1">
+                    <p class="text-xs text-slate-400 leading-tight mt-1">
                       شتابت رو حفظ کن، نزدیک شدی.
                     </p>
                   </div>
 
-                  <!-- Dynamic Circular Progress Gauge (78%) -->
+                  <!-- Dynamic Circular Progress Gauge -->
                   <div class="relative w-18 h-18 shrink-0 flex items-center justify-center">
                     <svg class="w-full h-full -rotate-90" viewBox="0 0 80 80">
                       <!-- Background Track -->
@@ -211,7 +210,7 @@
                         cy="40"
                         r="34"
                         fill="transparent"
-                        stroke="#1e213a"
+                        stroke="#141724"
                         stroke-width="7"
                       />
                       <!-- Glowing Active Gradient Ring -->
@@ -220,7 +219,7 @@
                         cy="40"
                         r="34"
                         fill="transparent"
-                        stroke="url(#purpleGlowRing)"
+                        stroke="url(#unifiedBrandRing)"
                         stroke-width="7"
                         stroke-linecap="round"
                         stroke-dasharray="213.6"
@@ -228,37 +227,36 @@
                         class="transition-all duration-700 ease-out"
                       />
                       <defs>
-                        <linearGradient id="purpleGlowRing" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stop-color="#ec4899" />
-                          <stop offset="60%" stop-color="#a855f7" />
-                          <stop offset="100%" stop-color="#c084fc" />
+                        <linearGradient id="unifiedBrandRing" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stop-color="#DB2777" />
+                          <stop offset="100%" stop-color="#7C3AED" />
                         </linearGradient>
                       </defs>
                     </svg>
-                    <span class="absolute text-xs font-black text-white font-mono">
-                      {{ focusProgressPercent() }}%
+                    <span class="absolute text-xs font-bold text-white font-mono">
+                      {{ toPersianDigits(focusProgressPercent()) }}٪
                     </span>
                   </div>
                 </div>
 
                 <!-- Active Focus Task Inside Card -->
                 <div 
-                  class="p-2.5 rounded-2xl bg-[#0b0c16]/80 border border-white/5 flex items-center justify-between gap-2.5 group cursor-pointer hover:border-purple-500/40 transition"
+                  class="p-2.5 rounded-xl bg-[#0F111A]/80 border border-white/[0.05] flex items-center justify-between gap-2.5 group cursor-pointer hover:border-purple-500/30 transition"
                   (click)="focusTasksPreview()[0] ? onFocusItemClick(focusTasksPreview()[0]) : openVoiceCapture()"
                 >
                   <div class="flex items-center gap-2.5 min-w-0">
                     <button
                       type="button"
-                      class="w-7 h-7 rounded-lg bg-purple-950/80 border border-purple-500/40 text-purple-300 flex items-center justify-center text-xs shrink-0 hover:bg-purple-600 hover:text-white transition"
-                      title="علامت‌گذاری به عنوان انجام شده"
+                      class="w-6 h-6 rounded-md bg-purple-950/60 border border-purple-500/30 text-purple-300 flex items-center justify-center text-xs shrink-0 hover:bg-purple-600 hover:text-white transition"
+                      title="تکمیل تسک"
                     >
                       ✓
                     </button>
                     <div class="min-w-0">
-                      <h4 class="text-xs font-bold text-white truncate">
+                      <h4 class="text-xs font-semibold text-white truncate">
                         {{ focusTasksPreview()[0]?.title }}
                       </h4>
-                      <p class="text-[10px] text-slate-400 truncate">
+                      <p class="text-xs text-slate-400 truncate mt-0.5">
                         {{ focusTasksPreview()[0]?.category }}
                       </p>
                     </div>
@@ -267,38 +265,38 @@
                   <span class="text-slate-400 group-hover:text-purple-300 text-xs shrink-0">›</span>
                 </div>
 
-                <!-- Tags Row -->
+                <!-- Tags Row with Muted Pastel Tones -->
                 <div class="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span class="text-[9px] font-bold px-2 py-0.5 rounded-md bg-purple-950/60 text-purple-300 border border-purple-500/20">
+                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-purple-950/50 text-purple-200 border border-purple-500/20">
                     {{ focusTasksPreview()[0]?.impactTag }}
                   </span>
-                  <span class="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-white/5">
+                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800/60 text-slate-300 border border-white/[0.05]">
                     {{ focusTasksPreview()[0]?.workTag }}
                   </span>
                 </div>
               </div>
 
-              <!-- RIGHT COLUMN: 2 Stacked Cards (Voice Drafts + Energy) -->
+              <!-- RIGHT COLUMN: Voice Drafts + Energy -->
               <div class="flex flex-col gap-3.5">
                 
                 <!-- CARD B: VOICE DRAFTS -->
-                <div class="p-4 rounded-3xl bg-[#14162c]/90 border border-white/10 shadow-xl backdrop-blur-xl flex flex-col justify-between">
+                <div class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-lg backdrop-blur-xl flex flex-col justify-between">
                   <div class="flex items-center justify-between">
-                    <div class="w-8 h-8 rounded-xl bg-pink-950/70 border border-pink-500/30 text-pink-400 flex items-center justify-center text-sm">
+                    <div class="w-8 h-8 rounded-xl bg-pink-950/50 border border-pink-500/30 text-pink-300 flex items-center justify-center text-sm">
                       🎙️
                     </div>
-                    <!-- Pink Badge: 2 -->
-                    <span class="px-2 py-0.5 rounded-full bg-pink-500 text-white font-black text-[11px] shadow-sm shadow-pink-500/40">
-                      {{ voiceDraftsCount() }}
+                    <!-- Pink Badge -->
+                    <span class="px-2 py-0.5 rounded-full bg-[#DB2777] text-white font-bold text-xs">
+                      {{ toPersianDigits(voiceDraftsCount()) }}
                     </span>
                   </div>
 
                   <div class="my-2">
-                    <h3 class="text-sm font-extrabold text-white">
-                      پیش‌نویس‌های صوتی (Voice Drafts)
+                    <h3 class="text-sm font-bold text-white">
+                      پیش‌نویس‌های صوتی
                     </h3>
-                    <p class="text-[10px] text-slate-400">
-                      آماده بررسی (Ready to review)
+                    <p class="text-xs text-slate-400">
+                      آماده بررسی
                     </p>
                   </div>
 
@@ -307,7 +305,7 @@
                     <button
                       type="button"
                       (click)="toggleVoiceDraftPlayback()"
-                      class="w-7 h-7 rounded-full bg-pink-600/40 hover:bg-pink-600 border border-pink-400/40 text-pink-200 hover:text-white flex items-center justify-center text-xs transition cursor-pointer shrink-0"
+                      class="w-7 h-7 rounded-full bg-pink-600/30 hover:bg-pink-600 border border-pink-400/30 text-pink-200 hover:text-white flex items-center justify-center text-xs transition cursor-pointer shrink-0"
                       title="پخش پیش‌نویس صوتی"
                     >
                       @if (isVoiceDraftPlaying()) {
@@ -316,29 +314,29 @@
                         <span>▶</span>
                       }
                     </button>
-                    <!-- Audio Waveform Bars in Pink -->
+                    <!-- Audio Waveform Bars in Soft Pink -->
                     <div class="flex items-center gap-1 flex-1 h-6">
-                      <span class="w-1 bg-pink-400/80 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-1' : 'h-2'"></span>
-                      <span class="w-1 bg-pink-400/80 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-2' : 'h-4'"></span>
-                      <span class="w-1 bg-pink-400/80 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-3' : 'h-5'"></span>
-                      <span class="w-1 bg-pink-400/80 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-4' : 'h-3'"></span>
-                      <span class="w-1 bg-pink-400/80 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-5' : 'h-4'"></span>
-                      <span class="w-1 bg-pink-400/80 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-1' : 'h-2'"></span>
-                      <span class="w-1 bg-pink-400/80 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-3' : 'h-3'"></span>
+                      <span class="w-1 bg-pink-400/70 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-1' : 'h-2'"></span>
+                      <span class="w-1 bg-pink-400/70 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-2' : 'h-4'"></span>
+                      <span class="w-1 bg-pink-400/70 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-3' : 'h-5'"></span>
+                      <span class="w-1 bg-pink-400/70 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-4' : 'h-3'"></span>
+                      <span class="w-1 bg-pink-400/70 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-5' : 'h-4'"></span>
+                      <span class="w-1 bg-pink-400/70 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-1' : 'h-2'"></span>
+                      <span class="w-1 bg-pink-400/70 rounded-full" [ngClass]="isVoiceDraftPlaying() ? 'animate-eq-3' : 'h-3'"></span>
                     </div>
                   </div>
                 </div>
 
                 <!-- CARD C: ENERGY & HABITS -->
-                <div class="p-4 rounded-3xl bg-[#14162c]/90 border border-white/10 shadow-xl backdrop-blur-xl flex flex-col justify-between">
+                <div class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-lg backdrop-blur-xl flex flex-col justify-between">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1.5">
-                      <span class="text-emerald-400 text-sm">⚡</span>
-                      <span class="text-xs font-bold text-white">انرژی (Energy)</span>
+                      <span class="text-amber-400 text-sm">⚡</span>
+                      <span class="text-xs font-semibold text-white">سطح انرژی</span>
                     </div>
-                    <!-- Status Badge: Great in Neon Green -->
-                    <span class="text-[11px] font-black text-emerald-400 tracking-wider">
-                      عالی (Great)
+                    <!-- Status Badge -->
+                    <span class="text-xs font-bold text-emerald-400">
+                      عالی
                     </span>
                   </div>
 
@@ -348,15 +346,15 @@
                     <span class="w-3 rounded-full bg-slate-800 h-6"></span>
                     <span class="w-3 rounded-full bg-slate-800 h-5"></span>
                     <span class="w-3 rounded-full bg-slate-800 h-8"></span>
-                    <!-- Glowing Active Bar (Emerald) -->
-                    <span class="w-3.5 rounded-full bg-emerald-400 h-10 shadow-[0_0_12px_rgba(16,185,129,0.8)]"></span>
+                    <!-- Active Bar: Emerald for Success -->
+                    <span class="w-3.5 rounded-full bg-emerald-500 h-10 shadow-sm"></span>
                     <span class="w-3 rounded-full bg-slate-800 h-6"></span>
                   </div>
 
                   <!-- Habits & Energy Footer Info -->
-                  <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/5">
-                    <span>عادت‌ها و انرژی (Habits & energy)</span>
-                    <span class="font-bold text-slate-200">۵/۶ انجام شد (5/6 done)</span>
+                  <div class="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-white/[0.05]">
+                    <span>عادت‌ها و پایداری</span>
+                    <span class="font-semibold text-slate-200">۵ از ۶ انجام شد</span>
                   </div>
                 </div>
 
@@ -364,7 +362,7 @@
             </div>
           </div>
 
-          <!-- 4. EXPANDABLE TASK TIMELINE (When 'مشاهده همه' is clicked) -->
+          <!-- 4. EXPANDABLE TASK TIMELINE -->
           @if (showAllTimeline()) {
             <div class="pt-2 animate-fade-in">
               <app-task-timeline
@@ -394,29 +392,29 @@
       @if (activeNavTab() === 'profile') {
         <div class="flex-1 space-y-4 py-2 animate-fade-in select-none">
           
-          <!-- Top Row: YOUR SPACE / Profile + Edit Button -->
+          <!-- Top Row: Profile + Edit Button -->
           <div class="flex items-center justify-between">
             <div>
-              <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                فضای شما (YOUR SPACE)
+              <span class="text-xs text-slate-400 font-medium block">
+                فضای کاربری
               </span>
-              <h2 class="text-xl font-black text-white tracking-tight">
-                پروفایل (Profile)
+              <h2 class="text-xl font-bold text-white tracking-tight">
+                پروفایل
               </h2>
             </div>
             <button
               type="button"
               (click)="openProfileModal()"
-              class="text-xs font-bold text-purple-400 hover:text-purple-300 transition cursor-pointer"
+              class="text-xs font-semibold text-purple-400 hover:text-purple-300 transition cursor-pointer"
             >
-              ویرایش (Edit)
+              ویرایش
             </button>
           </div>
 
           <!-- PROFILE HERO CARD -->
-          <div class="p-6 rounded-3xl bg-[#14162c]/90 border border-white/10 shadow-2xl backdrop-blur-xl flex flex-col items-center text-center relative overflow-hidden">
-            <!-- Glow background -->
-            <div class="absolute -top-12 -right-12 w-40 h-40 bg-purple-600/25 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="p-6 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-xl backdrop-blur-xl flex flex-col items-center text-center relative overflow-hidden">
+            <!-- Subtle glow background -->
+            <div class="absolute -top-12 -right-12 w-40 h-40 bg-purple-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
             <!-- Mascot Avatar with Sparkle Star Badge -->
             <div class="mb-3">
@@ -424,32 +422,32 @@
             </div>
 
             <!-- User Name -->
-            <h3 class="text-lg font-black text-white tracking-tight">
-              {{ userProfile()?.name || 'الکس مورگان (Alex Morgan)' }}
+            <h3 class="text-lg font-bold text-white tracking-tight">
+              {{ userProfile()?.name || 'الکس مورگان' }}
             </h3>
 
-            <!-- Level Badge: LEVEL 12 - FLOW FINDER -->
-            <div class="mt-1.5 px-3 py-1 rounded-full bg-purple-950/70 border border-purple-500/40 text-purple-300 text-xs font-black flex items-center gap-1.5 shadow-sm">
+            <!-- Level Badge -->
+            <div class="mt-1.5 px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/30 text-purple-200 text-xs font-semibold flex items-center gap-1.5 shadow-sm">
               <span class="text-purple-400">⚡</span>
-              <span>سطح {{ userLevel() }} - استاد تمرکز (LEVEL {{ userLevel() }} - FLOW FINDER)</span>
+              <span>سطح {{ toPersianDigits(userLevel()) }} · استاد تمرکز</span>
             </div>
 
             <!-- Stats Row: 3 Columns with Clean Dividers -->
-            <div class="w-full grid grid-cols-3 divide-x divide-x-reverse divide-white/10 mt-6 pt-4 border-t border-white/10">
+            <div class="w-full grid grid-cols-3 divide-x divide-x-reverse divide-white/[0.08] mt-6 pt-4 border-t border-white/[0.08]">
               <!-- Tasks Done -->
               <div class="px-2">
-                <span class="text-base font-black text-white block">{{ tasksDoneStat() }}</span>
-                <span class="text-[10px] text-slate-400 leading-tight block">کارهای انجام‌شده</span>
+                <span class="text-base font-bold text-white block">{{ toPersianDigits(tasksDoneStat()) }}</span>
+                <span class="text-xs text-slate-400 leading-tight block mt-0.5">کارهای انجام‌شده</span>
               </div>
               <!-- Voice Memos -->
               <div class="px-2">
-                <span class="text-base font-black text-white block">{{ voiceMemosStat() }}</span>
-                <span class="text-[10px] text-slate-400 leading-tight block">یادداشت صوتی</span>
+                <span class="text-base font-bold text-white block">{{ toPersianDigits(voiceMemosStat()) }}</span>
+                <span class="text-xs text-slate-400 leading-tight block mt-0.5">یادداشت صوتی</span>
               </div>
               <!-- Day Streak -->
               <div class="px-2">
-                <span class="text-base font-black text-white block">{{ streakDays() }}</span>
-                <span class="text-[10px] text-slate-400 leading-tight block">روز استمرار</span>
+                <span class="text-base font-bold text-white block">{{ toPersianDigits(streakDays()) }}</span>
+                <span class="text-xs text-slate-400 leading-tight block mt-0.5">روز استمرار</span>
               </div>
             </div>
           </div>
@@ -458,19 +456,19 @@
           <div class="space-y-2 pt-2">
             <div class="flex items-center justify-between px-1">
               <div>
-                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                  شخصی‌سازی (PERSONALIZE)
+                <span class="text-xs text-slate-400 font-medium block">
+                  شخصی‌سازی
                 </span>
-                <h3 class="text-sm font-extrabold text-white">
-                  تمرکز و علایق من (My focus & interests)
+                <h3 class="text-sm font-bold text-white">
+                  تمرکز و علایق من
                 </h3>
               </div>
               <button
                 type="button"
                 (click)="openProfileModal()"
-                class="text-xs font-bold text-purple-400 hover:text-purple-300 cursor-pointer"
+                class="text-xs font-semibold text-purple-400 hover:text-purple-300 cursor-pointer"
               >
-                مدیریت (Manage)
+                مدیریت
               </button>
             </div>
 
@@ -480,85 +478,85 @@
               <button
                 type="button"
                 (click)="toggleInterest('coding')"
-                class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer interactive-spring"
+                class="px-3.5 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer interactive-spring"
                 [ngClass]="profileInterests().includes('coding')
-                  ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm shadow-purple-900/50'
-                  : 'bg-[#14162c] border-white/10 text-slate-400 hover:text-white'"
+                  ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm'
+                  : 'bg-[#1A1D2B] border-white/[0.08] text-slate-400 hover:text-white'"
               >
                 <span class="font-mono text-purple-400">&#123;&#125;</span>
-                <span>کدنویسی (Coding)</span>
+                <span>کدنویسی</span>
               </button>
 
               <!-- Fitness -->
               <button
                 type="button"
                 (click)="toggleInterest('fitness')"
-                class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer interactive-spring"
+                class="px-3.5 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer interactive-spring"
                 [ngClass]="profileInterests().includes('fitness')
-                  ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm shadow-purple-900/50'
-                  : 'bg-[#14162c] border-white/10 text-slate-400 hover:text-white'"
+                  ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm'
+                  : 'bg-[#1A1D2B] border-white/[0.08] text-slate-400 hover:text-white'"
               >
                 <span>🏃</span>
-                <span>تناسب اندام (Fitness)</span>
+                <span>تناسب اندام</span>
               </button>
 
               <!-- Study -->
               <button
                 type="button"
                 (click)="toggleInterest('study')"
-                class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer interactive-spring"
+                class="px-3.5 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer interactive-spring"
                 [ngClass]="profileInterests().includes('study')
-                  ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm shadow-purple-900/50'
-                  : 'bg-[#14162c] border-white/10 text-slate-400 hover:text-white'"
+                  ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm'
+                  : 'bg-[#1A1D2B] border-white/[0.08] text-slate-400 hover:text-white'"
               >
                 <span class="font-serif">Aa</span>
-                <span>مطالعه (Study)</span>
+                <span>مطالعه</span>
               </button>
 
               <!-- Creative -->
               <button
                 type="button"
                 (click)="toggleInterest('creative')"
-                class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer interactive-spring"
+                class="px-3.5 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer interactive-spring"
                 [ngClass]="profileInterests().includes('creative')
-                  ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm shadow-purple-900/50'
-                  : 'bg-[#14162c] border-white/10 text-slate-400 hover:text-white'"
+                  ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm'
+                  : 'bg-[#1A1D2B] border-white/[0.08] text-slate-400 hover:text-white'"
               >
                 <span>✦</span>
-                <span>خلاقیت (Creative)</span>
+                <span>خلاقیت</span>
               </button>
 
               <!-- Mindfulness -->
               <button
                 type="button"
                 (click)="toggleInterest('mindfulness')"
-                class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer interactive-spring"
+                class="px-3.5 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer interactive-spring"
                 [ngClass]="profileInterests().includes('mindfulness')
-                  ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm shadow-purple-900/50'
-                  : 'bg-[#14162c] border-white/10 text-slate-400 hover:text-white'"
+                  ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm'
+                  : 'bg-[#1A1D2B] border-white/[0.08] text-slate-400 hover:text-white'"
               >
                 <span>✧</span>
-                <span>ذهن‌آگاهی (Mindfulness)</span>
+                <span>ذهن‌آگاهی</span>
               </button>
             </div>
           </div>
 
           <!-- SECTION: EXPERIENCE -->
           <div class="space-y-3 pt-2">
-            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block px-1">
-              تجربه کاربری (EXPERIENCE)
+            <span class="text-xs text-slate-400 font-medium block px-1">
+              تجربه کاربری
             </span>
 
             <!-- App Atmosphere Card -->
-            <div class="p-4 rounded-3xl bg-[#14162c]/90 border border-white/10 shadow-xl backdrop-blur-xl space-y-3">
+            <div class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-md backdrop-blur-xl space-y-3">
               <div class="flex items-center gap-2.5">
                 <span class="text-purple-400 text-sm">🌙</span>
                 <div>
-                  <h4 class="text-xs sm:text-sm font-bold text-white">
-                    فضای اپلیکیشن (App atmosphere)
+                  <h4 class="text-sm font-semibold text-white">
+                    فضای اپلیکیشن
                   </h4>
-                  <p class="text-[10px] text-slate-400">
-                    حس‌وحال و ظاهر برنامه رو تنظیم کن (Match your current vibe)
+                  <p class="text-xs text-slate-400">
+                    تنظیم حس‌وحال و ظاهر برنامه
                   </p>
                 </div>
               </div>
@@ -568,25 +566,25 @@
                 <button
                   type="button"
                   (click)="setAtmosphere('dark_neon')"
-                  class="py-2.5 px-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
+                  class="py-2.5 px-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
                   [ngClass]="appAtmosphere() === 'dark_neon'
-                    ? 'bg-purple-950/90 border-purple-500 text-white shadow-md shadow-purple-900/40'
-                    : 'bg-slate-900/60 border-white/10 text-slate-400 hover:text-white'"
+                    ? 'bg-purple-950/90 border-purple-500 text-white shadow-sm'
+                    : 'bg-slate-900/60 border-white/[0.08] text-slate-400 hover:text-white'"
                 >
                   <span>🌙</span>
-                  <span>نئون تاریک (Dark Neon)</span>
+                  <span>نئون تاریک</span>
                 </button>
 
                 <button
                   type="button"
                   (click)="setAtmosphere('cyber_sunset')"
-                  class="py-2.5 px-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
+                  class="py-2.5 px-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
                   [ngClass]="appAtmosphere() === 'cyber_sunset'
-                    ? 'bg-orange-950/90 border-orange-500 text-white shadow-md shadow-orange-900/40'
-                    : 'bg-slate-900/60 border-white/10 text-slate-400 hover:text-white'"
+                    ? 'bg-amber-950/90 border-amber-500 text-white shadow-sm'
+                    : 'bg-slate-900/60 border-white/[0.08] text-slate-400 hover:text-white'"
                 >
                   <span>☀️</span>
-                  <span>غروب سایبری (Cyber Sunset)</span>
+                  <span>غروب سایبری</span>
                 </button>
               </div>
             </div>
@@ -594,17 +592,17 @@
             <!-- AI Personality Row -->
             <div 
               (click)="cycleAIPersonality()"
-              class="p-4 rounded-2xl bg-[#14162c]/90 border border-white/10 flex items-center justify-between cursor-pointer hover:border-purple-500/40 transition shadow-md"
+              class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] flex items-center justify-between cursor-pointer hover:border-purple-500/30 transition shadow-sm"
             >
               <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl bg-purple-950/70 border border-purple-500/30 text-purple-300 flex items-center justify-center text-sm">
+                <div class="w-8 h-8 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-300 flex items-center justify-center text-sm">
                   ✦
                 </div>
                 <div>
-                  <h4 class="text-xs sm:text-sm font-bold text-white">
-                    شخصیت هوش مصنوعی (AI personality)
+                  <h4 class="text-sm font-semibold text-white">
+                    شخصیت هوش مصنوعی
                   </h4>
-                  <p class="text-[10px] text-slate-400">
+                  <p class="text-xs text-slate-400">
                     {{ aiPersonality() }}
                   </p>
                 </div>
@@ -613,17 +611,17 @@
             </div>
 
             <!-- Voice Nudges Row with Modern iOS-Style Toggle Switch -->
-            <div class="p-4 rounded-2xl bg-[#14162c]/90 border border-white/10 flex items-center justify-between shadow-md">
+            <div class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] flex items-center justify-between shadow-sm">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-8 h-8 rounded-xl bg-purple-950/70 border border-purple-500/30 text-purple-300 flex items-center justify-center text-sm shrink-0">
+                <div class="w-8 h-8 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-300 flex items-center justify-center text-sm shrink-0">
                   〰️
                 </div>
                 <div class="min-w-0">
-                  <h4 class="text-xs sm:text-sm font-bold text-white truncate">
-                    هشدارهای صوتی (Voice nudges)
+                  <h4 class="text-sm font-semibold text-white truncate">
+                    هشدارهای صوتی
                   </h4>
-                  <p class="text-[10px] text-slate-400 truncate">
-                    یادآوری‌های صوتی ملایم هنگام حواس‌پرتی (Gentle reminders when you drift)
+                  <p class="text-xs text-slate-400 truncate">
+                    یادآوری صوتی ملایم هنگام کاهش تمرکز
                   </p>
                 </div>
               </div>
@@ -644,7 +642,7 @@
               <button
                 type="button"
                 (click)="themeService.openStudio()"
-                class="p-3 rounded-2xl bg-[#14162c] border border-white/10 hover:border-purple-400 text-xs font-bold text-slate-200 flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
+                class="p-3 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] hover:border-purple-400 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
               >
                 <span>🎨</span>
                 <span>استودیو آواتار</span>
@@ -652,7 +650,7 @@
               <button
                 type="button"
                 (click)="openCalendarModal()"
-                class="p-3 rounded-2xl bg-[#14162c] border border-white/10 hover:border-purple-400 text-xs font-bold text-slate-200 flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
+                class="p-3 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] hover:border-purple-400 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
               >
                 <span>🗓️</span>
                 <span>تقویم شمسی</span>
@@ -665,10 +663,10 @@
       }
 
       <!-- ======================================================== -->
-      <!-- FLOATING BOTTOM NAVIGATION BAR (Image 1 & 2)             -->
+      <!-- FLOATING BOTTOM NAVIGATION BAR                           -->
       <!-- ======================================================== -->
       <nav 
-        class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm rounded-full bg-[#121428]/95 border border-white/10 backdrop-blur-2xl px-6 py-2 shadow-[0_12px_36px_rgba(0,0,0,0.85)] flex items-center justify-around select-none"
+        class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm rounded-full bg-[#1A1D2B]/95 border border-white/[0.08] backdrop-blur-2xl px-6 py-2 shadow-2xl flex items-center justify-around select-none"
         dir="rtl"
         aria-label="منوی ناوبری اصلی"
       >
@@ -677,26 +675,23 @@
           type="button"
           (click)="activeNavTab.set('home')"
           class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200"
-          [ngClass]="activeNavTab() === 'home' ? 'text-white' : 'text-slate-500 hover:text-slate-300'"
+          [ngClass]="activeNavTab() === 'home' ? 'text-white' : 'text-slate-400 hover:text-slate-200'"
           title="خانه"
         >
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
-          <span class="text-[10px] font-extrabold tracking-tight">خانه (Home)</span>
+          <span class="text-xs font-semibold">خانه</span>
         </button>
 
-        <!-- Center Glowing Floating AI Microphone Button (Image 1 & 2) -->
+        <!-- Center Glowing Floating AI Microphone Button -->
         <div class="relative -mt-7 flex items-center justify-center">
-          <!-- Pulse Outer Aura -->
-          <div class="absolute inset-0 rounded-full bg-purple-500/30 blur-md animate-ping pointer-events-none"></div>
-
           <button
             type="button"
             (click)="openVoiceCapture()"
-            class="relative w-14 h-14 rounded-full bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-pink-500 border-4 border-[#090a16] text-white flex items-center justify-center shadow-[0_0_25px_rgba(168,85,247,0.7)] hover:scale-105 active:scale-95 transition cursor-pointer select-none"
-            title="ثبت صوتی هوشمند (Image 3)"
+            class="relative w-14 h-14 rounded-full bg-gradient-to-tr from-[#7C3AED] via-[#A855F7] to-[#DB2777] border-4 border-[#0F111A] text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition cursor-pointer select-none"
+            title="ثبت صوتی هوشمند"
             aria-label="دکمه میکروفون هوش مصنوعی"
           >
             <svg class="w-6 h-6 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
@@ -713,21 +708,21 @@
           type="button"
           (click)="activeNavTab.set('profile')"
           class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200"
-          [ngClass]="activeNavTab() === 'profile' ? 'text-white' : 'text-slate-500 hover:text-slate-300'"
+          [ngClass]="activeNavTab() === 'profile' ? 'text-white' : 'text-slate-400 hover:text-slate-200'"
           title="پروفایل"
         >
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
-          <span class="text-[10px] font-extrabold tracking-tight">پروفایل (Profile)</span>
+          <span class="text-xs font-semibold">پروفایل</span>
         </button>
       </nav>
 
     </div>
 
     <!-- ======================================================== -->
-    <!-- VOICE AI CAPTURE MODAL (IMAGE 3)                         -->
+    <!-- VOICE AI CAPTURE MODAL                                   -->
     <!-- ======================================================== -->
     <app-voice-input
       [isLoading]="isLoading()"
@@ -796,15 +791,15 @@
 
     <!-- AI Thinking Loading Modal Overlay -->
     @if (isLoading()) {
-      <div class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-        <div class="relative w-24 h-24 mb-4">
+      <div class="fixed inset-0 z-50 bg-[#0F111A]/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+        <div class="relative w-20 h-20 mb-4">
           <div class="absolute inset-0 rounded-full border-4 border-purple-500/20 border-t-purple-500 animate-spin"></div>
-          <div class="absolute inset-2 rounded-full border-4 border-indigo-500/20 border-b-indigo-400 animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
-          <div class="absolute inset-0 flex items-center justify-center text-3xl animate-bounce">
+          <div class="absolute inset-2 rounded-full border-4 border-pink-500/20 border-b-pink-400 animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
+          <div class="absolute inset-0 flex items-center justify-center text-2xl animate-bounce">
             🔮
           </div>
         </div>
-        <h3 class="text-base font-bold text-purple-200 mb-1">تَسکی در حال پردازش صوت و برنامه شماست...</h3>
+        <h3 class="text-sm sm:text-base font-bold text-white mb-1">تَسکی در حال پردازش صوت و برنامه شماست...</h3>
         <p class="text-xs text-slate-400 max-w-xs leading-relaxed">
           هوش مصنوعی در حال پیاده‌سازی صدا، تفکیک تسک‌ها و تنظیم زمان‌بندی دقیق شماست.
         </p>

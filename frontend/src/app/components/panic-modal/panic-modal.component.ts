@@ -1,6 +1,7 @@
 import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { toPersianDigits } from '../../utils/jalali';
 
 @Component({
   selector: 'app-panic-modal',
@@ -9,7 +10,7 @@ import { FormsModule } from '@angular/forms';
   template: `
     <dialog
       #panicDialog
-      class="fixed inset-0 z-50 p-4 m-auto rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-white/10 shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop:bg-slate-950/85 backdrop:backdrop-blur-md text-slate-100 max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden outline-none animate-fade-in"
+      class="fixed inset-0 z-50 p-4 m-auto rounded-2xl bg-[#1A1D2B] backdrop-blur-2xl border border-white/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.8)] backdrop:bg-[#0F111A]/85 backdrop:backdrop-blur-md text-slate-100 max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden outline-none animate-fade-in"
       (cancel)="onCancel($event)"
       (click)="onDialogClick($event)"
       dir="rtl"
@@ -59,7 +60,7 @@ import { FormsModule } from '@angular/forms';
         @if (uncompletedTasksCount > 0) {
           <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs">
             <span class="text-slate-400">کارهای در انتظار امروز:</span>
-            <span class="font-bold text-amber-300 font-mono">{{ uncompletedTasksCount }} تسک باقی‌مانده</span>
+            <span class="font-bold text-amber-300 font-mono">{{ toPersianDigits(uncompletedTasksCount) }} تسک باقی‌مانده</span>
           </div>
         }
 
@@ -134,6 +135,7 @@ import { FormsModule } from '@angular/forms';
   `],
 })
 export class PanicModalComponent implements AfterViewInit {
+  readonly toPersianDigits = toPersianDigits;
   @ViewChild('panicDialog') dialogRef?: ElementRef<HTMLDialogElement>;
 
   @Input() isProcessing: boolean = false;

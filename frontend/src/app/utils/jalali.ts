@@ -166,6 +166,16 @@ export function getTodayIso(): string {
 }
 
 /**
+ * Formats any number or string with digits into clean Persian digits (e.g. 12 -> ۱۲)
+ */
+export function toPersianDigits(val: number | string | undefined | null): string {
+  if (val === undefined || val === null) return '';
+  const str = String(val);
+  const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  return str.replace(/\d/g, (d) => persianDigits[parseInt(d, 10)]);
+}
+
+/**
  * Returns current Jalali date [jy, jm, jd]
  */
 export function getTodayJalali(): [number, number, number] {

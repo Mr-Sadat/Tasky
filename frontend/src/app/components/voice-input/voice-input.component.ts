@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AudioRecorderService } from '../../services/audio-recorder.service';
 import { ThemeService } from '../../services/theme.service';
 import { Task } from '../../models/task.model';
+import { toPersianDigits } from '../../utils/jalali';
 
 export interface DetectedTaskPreview {
   id: string;
@@ -19,12 +20,10 @@ export interface DetectedTaskPreview {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <!-- ======================================================== -->
-    <!-- IMAGE 3: FULL SCREEN AI VOICE CAPTURE / LISTENING MODAL  -->
-    <!-- ======================================================== -->
+    <!-- FULL SCREEN AI VOICE CAPTURE / LISTENING MODAL -->
     @if (isModalOpen()) {
       <div 
-        class="fixed inset-0 z-50 bg-[#090a16]/95 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 text-slate-100 overflow-y-auto select-none animate-fade-in"
+        class="fixed inset-0 z-50 bg-[#0F111A]/95 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 text-slate-100 overflow-y-auto select-none animate-fade-in"
         dir="rtl"
       >
         <!-- Modal Inner Centered Container -->
@@ -36,18 +35,18 @@ export interface DetectedTaskPreview {
             <button
               type="button"
               (click)="closeModal()"
-              class="w-10 h-10 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer text-sm shadow-md"
+              class="w-10 h-10 rounded-full bg-[#1A1D2B] hover:bg-slate-800 border border-white/[0.08] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer text-sm shadow-sm"
               title="بستن"
               aria-label="بستن"
             >
               ✕
             </button>
 
-            <!-- Centered Pulsing Recording Status -->
+            <!-- Centered Recording Status -->
             <div class="flex items-center gap-2 px-3.5 py-1 rounded-full bg-pink-950/40 border border-pink-500/30 shadow-inner">
-              <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
-              <span class="text-xs font-black tracking-wider uppercase text-pink-300">
-                {{ isPaused() ? 'متوقف شده' : 'در حال شنیدن...' }} (LISTENING)
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+              <span class="text-xs font-semibold text-pink-300">
+                {{ isPaused() ? 'متوقف شده' : 'در حال گوش دادن...' }}
               </span>
             </div>
 
@@ -55,8 +54,8 @@ export interface DetectedTaskPreview {
             <button
               type="button"
               (click)="toggleManualInput()"
-              class="w-10 h-10 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer text-lg tracking-widest shadow-md"
-              title="تنظیمات یا ورود دستی"
+              class="w-10 h-10 rounded-full bg-[#1A1D2B] hover:bg-slate-800 border border-white/[0.08] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer text-lg tracking-widest shadow-sm"
+              title="ورود دستی یا ویرایش متن"
               aria-label="بیشتر"
             >
               ⋯
@@ -72,13 +71,12 @@ export interface DetectedTaskPreview {
               <div class="absolute inset-0 rounded-full border border-pink-500/20 animate-orb-ring-3 pointer-events-none"></div>
 
               <!-- Ambient Glow -->
-              <div class="absolute w-40 h-40 rounded-full bg-purple-600/30 blur-2xl pointer-events-none"></div>
-              <div class="absolute w-32 h-32 rounded-full bg-pink-500/20 blur-xl pointer-events-none"></div>
+              <div class="absolute w-40 h-40 rounded-full bg-purple-600/25 blur-2xl pointer-events-none"></div>
 
               <!-- 3D Glossy Purple Sphere Orb -->
               <div 
-                class="w-36 h-36 rounded-full relative flex items-center justify-center animate-orb shadow-[0_0_50px_rgba(168,85,247,0.5),inset_0_-8px_20px_rgba(0,0,0,0.6),inset_0_8px_16px_rgba(255,255,255,0.4)] cursor-pointer"
-                style="background: radial-gradient(circle at 35% 30%, #d8b4fe 0%, #a855f7 40%, #7e22ce 75%, #3b0764 100%);"
+                class="w-36 h-36 rounded-full relative flex items-center justify-center animate-orb shadow-[0_0_40px_rgba(124,58,237,0.45),inset_0_-8px_20px_rgba(0,0,0,0.6),inset_0_8px_16px_rgba(255,255,255,0.4)] cursor-pointer"
+                style="background: radial-gradient(circle at 35% 30%, #d8b4fe 0%, #9333ea 40%, #7e22ce 75%, #3b0764 100%);"
                 (click)="togglePauseResume()"
                 title="کلیک برای توقف یا ادامه گوش دادن"
               >
@@ -100,17 +98,17 @@ export interface DetectedTaskPreview {
             <h3 class="text-base font-bold text-white mt-4 tracking-tight">
               {{ isPaused() ? 'گوش دادن متوقف شد' : 'بگو، سراپا گوشم...' }}
             </h3>
-            <!-- Stopwatch Timer (e.g. 0:08) -->
-            <p class="text-xs font-mono font-medium text-slate-400 mt-1">
-              {{ formatSeconds(timerSeconds()) }}
+            <!-- Stopwatch Timer in Persian Digits -->
+            <p class="text-xs font-medium text-slate-400 mt-1 font-mono">
+              {{ toPersianDigits(formatSeconds(timerSeconds())) }}
             </p>
           </div>
 
           <!-- LIVE TRANSCRIPT CARD -->
-          <div class="w-full bg-[#131526]/90 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-xl mb-4 relative">
+          <div class="w-full bg-[#1A1D2B] border border-white/[0.08] rounded-2xl p-4 shadow-xl backdrop-blur-xl mb-4 relative">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400">
-                متن زنده (LIVE TRANSCRIPT)
+              <span class="text-xs font-semibold text-slate-400">
+                متن زنده
               </span>
               <!-- Sound wave pink icon -->
               <div class="flex items-center gap-0.5 text-pink-400">
@@ -127,16 +125,16 @@ export interface DetectedTaskPreview {
                 (ngModelChange)="onTranscriptChange($event)"
                 rows="2"
                 class="w-full bg-slate-950/70 border border-purple-500/40 rounded-xl p-2.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-400 leading-relaxed"
-                placeholder="متن را تایپ یا ویرایش کنید..."
+                placeholder="متن را بنویسید یا ویرایش کنید..."
               ></textarea>
             } @else {
-              <p class="text-xs sm:text-sm text-slate-100 leading-relaxed font-medium">
+              <p class="text-xs sm:text-sm text-slate-100 leading-relaxed font-normal">
                 «یادم بنداز به 
-                <span class="bg-purple-900/70 text-purple-200 px-1.5 py-0.5 rounded-md font-bold border border-purple-500/30 shadow-sm mx-1">
+                <span class="bg-purple-900/60 text-purple-200 px-1.5 py-0.5 rounded-md font-medium border border-purple-500/30 mx-1">
                   {{ detectedTasks()[0]?.title ? detectedTasks()[0].title : 'سارا زنگ بزنم' }}
                 </span>
                 درباره رونمایی، بعدش برای 
-                <span class="bg-purple-900/70 text-purple-200 px-1.5 py-0.5 rounded-md font-bold border border-purple-500/30 shadow-sm mx-1">
+                <span class="bg-purple-900/60 text-purple-200 px-1.5 py-0.5 rounded-md font-medium border border-purple-500/30 mx-1">
                   {{ detectedTasks()[1]?.timeLabel ? detectedTasks()[1].timeLabel : 'فردا ساعت ۱۵' }}
                 </span>
                 یه جلسه تنظیم کن.»
@@ -149,19 +147,19 @@ export interface DetectedTaskPreview {
             <div class="flex items-center justify-between px-1">
               <div class="flex items-center gap-1.5 text-purple-300 text-xs font-bold tracking-tight">
                 <span class="text-purple-400">✦</span>
-                <span>پیش‌نمایش تسک‌های هوش مصنوعی (AI TASK PREVIEW)</span>
+                <span>پیش‌نمایش تسک‌های هوش مصنوعی</span>
               </div>
-              <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-purple-950/70 text-purple-300 border border-purple-500/30">
-                {{ detectedTasks().length }} مورد تشخیص داده شد
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-950/60 text-purple-300 border border-purple-500/30">
+                {{ toPersianDigits(detectedTasks().length) }} تسک تشخیص داده شد
               </span>
             </div>
 
             <!-- List of Detected Tasks -->
             @for (task of detectedTasks(); track task.id) {
-              <div class="flex items-center justify-between p-3 rounded-2xl bg-[#131526]/85 border border-white/10 hover:border-purple-500/30 transition shadow-md">
+              <div class="flex items-center justify-between p-3 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] hover:border-purple-500/30 transition shadow-sm">
                 <div class="flex items-center gap-3 min-w-0">
                   <!-- Task Type Icon Box -->
-                  <div class="w-9 h-9 rounded-xl bg-purple-950/80 border border-purple-500/40 flex items-center justify-center text-purple-300 shrink-0">
+                  <div class="w-9 h-9 rounded-xl bg-purple-950/60 border border-purple-500/30 flex items-center justify-center text-purple-300 shrink-0">
                     @if (task.icon === 'check') {
                       <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12"></polyline>
@@ -178,18 +176,18 @@ export interface DetectedTaskPreview {
 
                   <!-- Task Info & Tags -->
                   <div class="min-w-0">
-                    <h4 class="text-xs sm:text-sm font-bold text-white truncate">{{ task.title }}</h4>
+                    <h4 class="text-xs sm:text-sm font-semibold text-white truncate">{{ task.title }}</h4>
                     <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-                      <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300">
+                      <span class="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">
                         {{ task.category }}
                       </span>
                       @if (task.priority === 'high') {
-                        <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-rose-950/80 text-rose-300 border border-rose-500/30">
-                          فوری (URGENT)
+                        <span class="text-[10px] font-medium px-2 py-0.5 rounded-md bg-rose-950/70 text-rose-300 border border-rose-500/30">
+                          فوری
                         </span>
                       }
-                      <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-md bg-purple-950/50 text-purple-300">
-                        {{ task.timeLabel }}
+                      <span class="text-[10px] font-medium px-2 py-0.5 rounded-md bg-purple-950/50 text-purple-300">
+                        {{ toPersianDigits(task.timeLabel) }}
                       </span>
                     </div>
                   </div>
@@ -214,8 +212,8 @@ export interface DetectedTaskPreview {
             <button
               type="button"
               (click)="togglePauseResume()"
-              class="w-13 h-13 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-white/10 text-slate-200 flex items-center justify-center transition cursor-pointer text-lg shadow-lg active:scale-95 shrink-0"
-              [title]="isPaused() ? 'ادامه ضبط' : 'مکث'"
+              class="w-13 h-13 rounded-2xl bg-[#1A1D2B] hover:bg-slate-800 border border-white/[0.08] text-slate-200 flex items-center justify-center transition cursor-pointer text-lg shadow-md active:scale-95 shrink-0"
+              [title]="isPaused() ? 'ادامه گوش دادن' : 'مکث'"
             >
               @if (isPaused()) {
                 <span class="text-emerald-400 text-xl">▶</span>
@@ -224,14 +222,13 @@ export interface DetectedTaskPreview {
               }
             </button>
 
-            <!-- Big Vibrant Gradient Pill Button: Create Tasks -->
+            <!-- Gradient Pill Button: Create Tasks -->
             <button
               type="button"
               (click)="confirmAndCreateTasks()"
-              class="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:opacity-95 active:scale-98 text-white font-extrabold text-sm shadow-xl shadow-purple-900/50 flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
+              class="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#7C3AED] to-[#DB2777] hover:opacity-95 active:scale-98 text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
             >
-              <span>ایجاد {{ detectedTasks().length }} تسک ✨</span>
-              <span class="text-xs opacity-80">(Create {{ detectedTasks().length }} tasks)</span>
+              <span>{{ detectedTasks().length > 0 ? 'ثبت ' + toPersianDigits(detectedTasks().length) + ' تسک ✨' : 'ثبت تسک‌ها ✨' }}</span>
             </button>
           </div>
 
@@ -241,6 +238,7 @@ export interface DetectedTaskPreview {
   `
 })
 export class VoiceInputComponent implements OnDestroy {
+  readonly toPersianDigits = toPersianDigits;
   readonly recorder = inject(AudioRecorderService);
   readonly themeService = inject(ThemeService);
 
@@ -263,7 +261,7 @@ export class VoiceInputComponent implements OnDestroy {
     {
       id: 'dt-1',
       title: 'تماس با سارا درباره رونمایی',
-      category: 'کاری (WORK)',
+      category: 'کاری',
       priority: 'high',
       timeLabel: 'امروز',
       icon: 'check',
@@ -271,7 +269,7 @@ export class VoiceInputComponent implements OnDestroy {
     {
       id: 'dt-2',
       title: 'جلسه درباره رونمایی',
-      category: 'کاری (WORK)',
+      category: 'کاری',
       timeLabel: 'فردا - ۱۵:۰۰',
       icon: 'calendar',
     },
@@ -325,7 +323,6 @@ export class VoiceInputComponent implements OnDestroy {
   }
 
   onTranscriptChange(val: string): void {
-    // Dynamically update preview if text is modified
     if (val.includes('سارا')) {
       // Keep existing structure
     }
@@ -348,11 +345,11 @@ export class VoiceInputComponent implements OnDestroy {
       console.warn('Audio recorder stop error:', e);
     }
 
-    // Emit the confirmed tasks
+    // Emit confirmed tasks
     const tasksToCreate = this.detectedTasks();
     this.tasksCreated.emit(tasksToCreate);
 
-    // Also emit combined text for tasky local-first planner
+    // Emit combined text for tasky planner
     const textPlan = tasksToCreate.map(t => t.title + ' ' + t.timeLabel).join(' و ');
     if (textPlan) {
       this.submitText.emit(textPlan);

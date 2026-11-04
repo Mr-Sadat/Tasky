@@ -29,29 +29,30 @@ import { DEFAULT_AVATAR_CUSTOMIZATION, sanitizeAvatarConfig } from '../../servic
         [class.animate-breathing]="state === 'idle' && costume !== 'sleeping'"
       >
         <defs>
-          <!-- Skin Shading / Contour Gradient -->
-          <linearGradient [id]="'skinShade_' + uniqueId" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" [attr.stop-color]="config().skinTone"/>
-            <stop offset="100%" [attr.stop-color]="getDarkerShade(config().skinTone, 0.12)"/>
-          </linearGradient>
+          <!-- Soft 3D Radial Skin Gradient matching Mascot DNA -->
+          <radialGradient [id]="'skinShade_' + uniqueId" cx="42%" cy="38%" r="62%">
+            <stop offset="0%" [attr.stop-color]="getLighterShade(config().skinTone, 0.18)"/>
+            <stop offset="65%" [attr.stop-color]="config().skinTone"/>
+            <stop offset="100%" [attr.stop-color]="getDarkerShade(config().skinTone, 0.20)"/>
+          </radialGradient>
 
           <!-- Hair Highlight Gradient -->
           <linearGradient [id]="'hairGrad_' + uniqueId" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" [attr.stop-color]="getLighterShade(config().hairColor, 0.18)"/>
-            <stop offset="40%" [attr.stop-color]="config().hairColor"/>
+            <stop offset="0%" [attr.stop-color]="getLighterShade(config().hairColor, 0.22)"/>
+            <stop offset="45%" [attr.stop-color]="config().hairColor"/>
             <stop offset="100%" [attr.stop-color]="getDarkerShade(config().hairColor, 0.25)"/>
           </linearGradient>
 
           <!-- Outfit Gradient -->
           <linearGradient [id]="'outfitGrad_' + uniqueId" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" [attr.stop-color]="getLighterShade(config().outfitColor, 0.15)"/>
+            <stop offset="0%" [attr.stop-color]="getLighterShade(config().outfitColor, 0.18)"/>
             <stop offset="100%" [attr.stop-color]="config().outfitColor"/>
           </linearGradient>
 
-          <!-- Cheek Blush -->
-          <radialGradient [id]="'blushGrad_' + uniqueId">
-            <stop offset="0%" stop-color="#ff7b92" stop-opacity="0.8"/>
-            <stop offset="100%" stop-color="#ff7b92" stop-opacity="0"/>
+          <!-- Cheek Blush with Soft Falloff -->
+          <radialGradient [id]="'blushGrad_' + uniqueId" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#f472b6" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#f472b6" stop-opacity="0"/>
           </radialGradient>
 
           <!-- Glasses Lens Sheen -->
@@ -346,52 +347,52 @@ import { DEFAULT_AVATAR_CUSTOMIZATION, sanitizeAvatarConfig } from '../../servic
           <g>
             @if (config().eyeShape === 'cat_eye') {
               <!-- Cat Eye Winged Shape -->
-              <path d="M 58 66 Q 67 59 75 66 Q 67 72 58 66 Z" fill="#ffffff" stroke="#18181b" stroke-width="1.2"/>
+              <path d="M 58 66 Q 67 59 75 66 Q 67 72 58 66 Z" fill="#ffffff" stroke="rgba(36,27,68,0.2)" stroke-width="0.8"/>
               <!-- Winged Eyeliner Flick -->
-              <path d="M 58 66 Q 55 63 53 62" fill="none" stroke="#18181b" stroke-width="2" stroke-linecap="round"/>
+              <path d="M 58 66 Q 55 63 53 62" fill="none" stroke="#241b44" stroke-width="1.8" stroke-linecap="round"/>
             } @else if (config().eyeShape === 'round_doe') {
               <!-- Round Doe Eye -->
-              <ellipse cx="67" cy="65" rx="7.5" ry="6.5" fill="#ffffff" stroke="#18181b" stroke-width="1"/>
+              <ellipse cx="67" cy="65" rx="7.5" ry="6.5" fill="#ffffff" stroke="rgba(36,27,68,0.15)" stroke-width="0.8"/>
             } @else {
               <!-- Almond Eye -->
-              <path d="M 59 66 Q 67 59 75 66 Q 67 71 59 66 Z" fill="#ffffff" stroke="#18181b" stroke-width="1"/>
+              <path d="M 59 66 Q 67 59 75 66 Q 67 71 59 66 Z" fill="#ffffff" stroke="rgba(36,27,68,0.15)" stroke-width="0.8"/>
             }
 
             <!-- Left Iris -->
             <circle cx="67" cy="65" r="4.2" [attr.fill]="config().eyeColor"/>
             <!-- Left Pupil -->
-            <circle cx="67" cy="65" r="2.4" fill="#09090b"/>
+            <circle cx="67" cy="65" r="2.4" fill="#1e1838"/>
             <!-- Dual Sparkles -->
             <circle cx="65.5" cy="63.5" r="1.3" fill="#ffffff"/>
             <circle cx="68.2" cy="66.2" r="0.7" fill="#ffffff"/>
             <!-- Upper Eyelid Line -->
-            <path d="M 58 65 Q 67 58 75 65" fill="none" stroke="#18181b" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M 58 65 Q 67 58 75 65" fill="none" stroke="#241b44" stroke-width="1.6" stroke-linecap="round"/>
           </g>
 
           <!-- RIGHT EYE -->
           <g>
             @if (config().eyeShape === 'cat_eye') {
               <!-- Cat Eye Winged Shape -->
-              <path d="M 85 66 Q 93 59 102 66 Q 93 72 85 66 Z" fill="#ffffff" stroke="#18181b" stroke-width="1.2"/>
+              <path d="M 85 66 Q 93 59 102 66 Q 93 72 85 66 Z" fill="#ffffff" stroke="rgba(36,27,68,0.2)" stroke-width="0.8"/>
               <!-- Winged Eyeliner Flick -->
-              <path d="M 102 66 Q 105 63 107 62" fill="none" stroke="#18181b" stroke-width="2" stroke-linecap="round"/>
+              <path d="M 102 66 Q 105 63 107 62" fill="none" stroke="#241b44" stroke-width="1.8" stroke-linecap="round"/>
             } @else if (config().eyeShape === 'round_doe') {
               <!-- Round Doe Eye -->
-              <ellipse cx="93" cy="65" rx="7.5" ry="6.5" fill="#ffffff" stroke="#18181b" stroke-width="1"/>
+              <ellipse cx="93" cy="65" rx="7.5" ry="6.5" fill="#ffffff" stroke="rgba(36,27,68,0.15)" stroke-width="0.8"/>
             } @else {
               <!-- Almond Eye -->
-              <path d="M 85 66 Q 93 59 101 66 Q 93 71 85 66 Z" fill="#ffffff" stroke="#18181b" stroke-width="1"/>
+              <path d="M 85 66 Q 93 59 101 66 Q 93 71 85 66 Z" fill="#ffffff" stroke="rgba(36,27,68,0.15)" stroke-width="0.8"/>
             }
 
             <!-- Right Iris -->
             <circle cx="93" cy="65" r="4.2" [attr.fill]="config().eyeColor"/>
             <!-- Right Pupil -->
-            <circle cx="93" cy="65" r="2.4" fill="#09090b"/>
+            <circle cx="93" cy="65" r="2.4" fill="#1e1838"/>
             <!-- Dual Sparkles -->
             <circle cx="91.5" cy="63.5" r="1.3" fill="#ffffff"/>
             <circle cx="94.2" cy="66.2" r="0.7" fill="#ffffff"/>
             <!-- Upper Eyelid Line -->
-            <path d="M 85 65 Q 93 58 102 65" fill="none" stroke="#18181b" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M 85 65 Q 93 58 102 65" fill="none" stroke="#241b44" stroke-width="1.6" stroke-linecap="round"/>
           </g>
         }
 

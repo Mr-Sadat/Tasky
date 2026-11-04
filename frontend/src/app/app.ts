@@ -16,7 +16,7 @@ import { PanicModalComponent } from './components/panic-modal/panic-modal.compon
 import { FocusModalComponent } from './components/focus-modal/focus-modal.component';
 import { CalendarModalComponent } from './components/calendar-modal/calendar-modal.component';
 import { TaskyMascotComponent } from './components/tasky-mascot/tasky-mascot.component';
-import { getJalaliDisplayStr, getTodayIso, toLocalIsoDate, addDaysToIso } from './utils/jalali';
+import { getJalaliDisplayStr, getTodayIso, toLocalIsoDate, addDaysToIso, toPersianDigits } from './utils/jalali';
 
 export interface FocusPreviewItem {
   id: string | number;
@@ -50,6 +50,8 @@ export interface FocusPreviewItem {
 export class App implements OnInit {
   @ViewChild(VoiceInputComponent) voiceInputComponent?: VoiceInputComponent;
 
+  readonly toPersianDigits = toPersianDigits;
+
   private readonly apiService = inject(ApiService);
   readonly notifications = inject(NotificationService);
   readonly themeService = inject(ThemeService);
@@ -62,7 +64,7 @@ export class App implements OnInit {
   // App Atmosphere & Settings
   readonly appAtmosphere = signal<'dark_neon' | 'cyber_sunset'>('dark_neon');
   readonly profileInterests = signal<string[]>(['coding', 'creative']);
-  readonly aiPersonality = signal<string>('رفیق پرانرژی (Hype friend)');
+  readonly aiPersonality = signal<string>('رفیق پرانرژی');
   readonly voiceNudgesEnabled = signal<boolean>(true);
   readonly isVoiceDraftPlaying = signal<boolean>(false);
   readonly voiceDraftsCount = signal<number>(2);
@@ -149,10 +151,10 @@ export class App implements OnInit {
       return [
         {
           id: 'focus-demo-1',
-          title: 'نهایی‌سازی کانسپت اپلیکیشن (Finalize app concept)',
-          category: 'خلاقانه · ۴۵ دقیقه (Creative · 45 min)',
-          impactTag: 'تاثیر بالا (High impact)',
-          workTag: 'کار عمیق (Deep work)',
+          title: 'نهایی‌سازی کانسپت و ساختار اصلی اپلیکیشن',
+          category: 'خلاقانه · ۴۵ دقیقه',
+          impactTag: 'اولویت بالا',
+          workTag: 'تمرکز عمیق',
           is_completed: false,
         }
       ];
@@ -160,9 +162,9 @@ export class App implements OnInit {
     return list.slice(0, 3).map(t => ({
       id: t.id,
       title: t.title,
-      category: `${t.category === 'work' ? 'کاری' : t.category === 'study' ? 'مطالعه' : 'خلاقانه'} · ${t.duration_minutes || 45} دقیقه`,
-      impactTag: t.priority === 'high' ? 'تاثیر بالا (High impact)' : 'عادی',
-      workTag: 'کار عمیق (Deep work)',
+      category: `${t.category === 'work' ? 'کاری' : t.category === 'study' ? 'مطالعه' : 'خلاقانه'} · ${toPersianDigits(t.duration_minutes || 45)} دقیقه`,
+      impactTag: t.priority === 'high' ? 'اولویت بالا' : 'عادی',
+      workTag: 'تمرکز عمیق',
       is_completed: t.is_completed,
       raw: t
     }));
@@ -243,18 +245,18 @@ export class App implements OnInit {
     this.appAtmosphere.set(mode);
     if (mode === 'cyber_sunset') {
       document.documentElement.setAttribute('data-theme', 'cyber-sunset');
-      this.showToast('اتمسفر به «غروب سایبری (Cyber Sunset)» تغییر یافت 🌅');
+      this.showToast('اتمسفر به «غروب سایبری» تغییر یافت 🌅');
     } else {
       document.documentElement.setAttribute('data-theme', 'dark-neon');
-      this.showToast('اتمسفر به «نئون تاریک (Dark Neon)» بازگشت 🌙✨');
+      this.showToast('اتمسفر به «نئون تاریک» بازگشت 🌙✨');
     }
   }
 
   cycleAIPersonality(): void {
     const modes = [
-      'رفیق پرانرژی (Hype friend)',
-      'مربی آرام و حامی (Calm mentor)',
-      'فرمانده دقیق و متمرکز (Strict coach)',
+      'رفیق پرانرژی',
+      'مربی حامی و آرام',
+      'فرمانده دقیق و هدفمند',
     ];
     const currentIndex = modes.indexOf(this.aiPersonality());
     const next = modes[(currentIndex + 1) % modes.length];
