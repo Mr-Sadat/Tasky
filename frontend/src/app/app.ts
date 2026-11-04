@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from './services/api.service';
 import { NotificationService } from './services/notification.service';
@@ -15,14 +15,24 @@ import { DailyRecapModalComponent } from './components/daily-recap-modal/daily-r
 import { PanicModalComponent } from './components/panic-modal/panic-modal.component';
 import { FocusModalComponent } from './components/focus-modal/focus-modal.component';
 import { CalendarModalComponent } from './components/calendar-modal/calendar-modal.component';
+import { TaskyMascotComponent } from './components/tasky-mascot/tasky-mascot.component';
 import { getJalaliDisplayStr, getTodayIso, toLocalIsoDate, addDaysToIso } from './utils/jalali';
+
+export interface FocusPreviewItem {
+  id: string | number;
+  title: string;
+  category: string;
+  impactTag: string;
+  workTag: string;
+  is_completed: boolean;
+  raw?: Task;
+}
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule,
-    AvatarCardComponent,
     VoiceInputComponent,
     TaskTimelineComponent,
     AvatarStudioModalComponent,
@@ -32,15 +42,31 @@ import { getJalaliDisplayStr, getTodayIso, toLocalIsoDate, addDaysToIso } from '
     PanicModalComponent,
     FocusModalComponent,
     CalendarModalComponent,
+    TaskyMascotComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
 export class App implements OnInit {
+  @ViewChild(VoiceInputComponent) voiceInputComponent?: VoiceInputComponent;
+
   private readonly apiService = inject(ApiService);
   readonly notifications = inject(NotificationService);
   readonly themeService = inject(ThemeService);
   readonly ttsService = inject(TtsService);
+
+  // Active Tab navigation: 'home' | 'profile'
+  readonly activeNavTab = signal<'home' | 'profile'>('home');
+  readonly showAllTimeline = signal<boolean>(false);
+
+  // App Atmosphere & Settings
+  readonly appAtmosphere = signal<'dark_neon' | 'cyber_sunset'>('dark_neon');
+  readonly profileInterests = signal<string[]>(['coding', 'creative']);
+  readonly aiPersonality = signal<string>('رفیق پرانرژی (Hype friend)');
+  readonly voiceNudgesEnabled = signal<boolean>(true);
+  readonly isVoiceDraftPlaying = signal<boolean>(false);
+  readonly voiceDraftsCount = signal<number>(2);
+  readonly voiceMemosStat = signal<number>(47);
 
   readonly tasks = signal<Task[]>([]);
   readonly avatarState = signal<AvatarState>('idle');
@@ -71,6 +97,84 @@ export class App implements OnInit {
   readonly uncompletedCount = computed(() => {
     return this.tasks().filter((t) => !t.is_completed).length;
   });
+
+  /**
+   * Computed: percentage of focus completion (default 78% matching design if newly initialized)
+   */
+  readonly focusProgressPercent = computed(() => {
+    const list = this.tasks();
+    if (list.length === 0) return 78;
+    const completed = list.filter(t => t.is_completed).length;
+    return Math.round((completed / list.length) * 100);
+  });
+
+  /**
+   * SVG Circumference calculation for 34px radius
+   */
+  readonly strokeDashOffset = computed(() => {
+    const circumference = 213.6;
+    const p = this.focusProgressPercent();
+    return circumference - (circumference * p) / 100;
+  });
+
+  /**
+   * User level calculated from XP
+   */
+  readonly userLevel = computed(() => {
+    const xp = this.userProfile()?.xp || 240;
+    return Math.max(12, Math.floor(xp / 20));
+  });
+
+  /**
+   * Tasks done count
+   */
+  readonly tasksDoneStat = computed(() => {
+    const count = this.tasks().filter(t => t.is_completed).length;
+    return 180 + count;
+  });
+
+  /**
+   * Streak count (default 12 matching design)
+   */
+  readonly streakDays = computed(() => {
+    return this.userProfile()?.streak_days || 12;
+  });
+
+  /**
+   * Top 3 focus tasks for Today's rhythm card
+   */
+  readonly focusTasksPreview = computed<FocusPreviewItem[]>(() => {
+    const list = this.tasks();
+    if (list.length === 0) {
+      return [
+        {
+          id: 'focus-demo-1',
+          title: 'نهایی‌سازی کانسپت اپلیکیشن (Finalize app concept)',
+          category: 'خلاقانه · ۴۵ دقیقه (Creative · 45 min)',
+          impactTag: 'تاثیر بالا (High impact)',
+          workTag: 'کار عمیق (Deep work)',
+          is_completed: false,
+        }
+      ];
+    }
+    return list.slice(0, 3).map(t => ({
+      id: t.id,
+      title: t.title,
+      category: `${t.category === 'work' ? 'کاری' : t.category === 'study' ? 'مطالعه' : 'خلاقانه'} · ${t.duration_minutes || 45} دقیقه`,
+      impactTag: t.priority === 'high' ? 'تاثیر بالا (High impact)' : 'عادی',
+      workTag: 'کار عمیق (Deep work)',
+      is_completed: t.is_completed,
+      raw: t
+    }));
+  });
+
+  onFocusItemClick(item: FocusPreviewItem): void {
+    if (item.raw) {
+      this.openFocusModal(item.raw);
+    } else {
+      this.openVoiceCapture();
+    }
+  }
 
   /**
    * Computed: identifies the task currently in progress based on real-world time
@@ -119,6 +223,84 @@ export class App implements OnInit {
     this.initDateLabel();
     this.generateDateTabs();
     this.checkProfileAndInitialize();
+  }
+
+  openVoiceCapture(): void {
+    this.voiceInputComponent?.openModal();
+  }
+
+  toggleInterest(tag: string): void {
+    this.profileInterests.update(current => {
+      if (current.includes(tag)) {
+        return current.filter(t => t !== tag);
+      } else {
+        return [...current, tag];
+      }
+    });
+  }
+
+  setAtmosphere(mode: 'dark_neon' | 'cyber_sunset'): void {
+    this.appAtmosphere.set(mode);
+    if (mode === 'cyber_sunset') {
+      document.documentElement.setAttribute('data-theme', 'cyber-sunset');
+      this.showToast('اتمسفر به «غروب سایبری (Cyber Sunset)» تغییر یافت 🌅');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark-neon');
+      this.showToast('اتمسفر به «نئون تاریک (Dark Neon)» بازگشت 🌙✨');
+    }
+  }
+
+  cycleAIPersonality(): void {
+    const modes = [
+      'رفیق پرانرژی (Hype friend)',
+      'مربی آرام و حامی (Calm mentor)',
+      'فرمانده دقیق و متمرکز (Strict coach)',
+    ];
+    const currentIndex = modes.indexOf(this.aiPersonality());
+    const next = modes[(currentIndex + 1) % modes.length];
+    this.aiPersonality.set(next);
+    this.showToast(`شخصیت هوش مصنوعی: ${next} ✦`);
+  }
+
+  toggleVoiceNudges(): void {
+    this.voiceNudgesEnabled.update(v => !v);
+    this.showToast(this.voiceNudgesEnabled() ? 'اعلان‌های صوتی ملایم فعال شدند 〰️' : 'اعلان‌های صوتی غیرفعال شدند');
+  }
+
+  toggleVoiceDraftPlayback(): void {
+    this.isVoiceDraftPlaying.update(v => !v);
+    if (this.isVoiceDraftPlaying()) {
+      this.ttsService.speak('پیش‌نویس صوتی: جلسه هماهنگی کمپین رونمایی برای فردا بعدازظهر بررسی و تایید شد.');
+      setTimeout(() => this.isVoiceDraftPlaying.set(false), 5000);
+    } else {
+      this.ttsService.stop();
+    }
+  }
+
+  toggleShowAllTimeline(): void {
+    this.showAllTimeline.update(v => !v);
+  }
+
+  onVoiceTasksCreated(detectedList: any[]): void {
+    if (!detectedList || detectedList.length === 0) return;
+
+    const todayIso = getTodayIso();
+    const newTasks: Task[] = detectedList.map((dt, idx) => ({
+      id: Date.now() + idx,
+      title: dt.title,
+      scheduled_time: idx === 0 ? '11:00' : '15:00',
+      duration_minutes: 45,
+      priority: dt.priority || 'medium',
+      category: 'work',
+      icon: dt.icon === 'calendar' ? 'star' : 'briefcase',
+      is_completed: false,
+      date: todayIso,
+      created_at: new Date().toISOString(),
+    }));
+
+    this.tasks.update(current => [...newTasks, ...current]);
+    this.showToast(`✨ ${newTasks.length} تسک جدید از طریق هوش مصنوعی صوتی ثبت شدند!`);
+    this.ttsService.speak(`عالیه! ${newTasks.length} تسک صوتی به ریتم روزت اضافه شد.`);
   }
 
   /**
