@@ -105,9 +105,14 @@ import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.compone
                     class="w-full bg-slate-950/80 border border-purple-500/40 rounded-2xl p-3 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/30 leading-relaxed shadow-inner"
                     placeholder="متن برنامه خود را اینجا بنویسید یا ویرایش کنید..."
                   ></textarea>
+                  @if (transcriptionError()) {
+                    <div class="p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-[11px] text-rose-200 leading-relaxed">
+                      ⚠️ {{ transcriptionError() }}
+                    </div>
+                  }
                   @if (!reviewText.trim()) {
                     <div class="p-2.5 rounded-xl bg-amber-950/50 border border-amber-500/30 text-[11px] text-amber-200 leading-relaxed">
-                      💡 <strong>نکته:</strong> متنی از صدا استخراج نشد. می‌توانید در کادر بالا متن را بنویسید یا از <strong>دکمه میکروفون کیبورد آیفون (دیکته صوتی)</strong> استفاده نمایید.
+                      💡 <strong>راهنما:</strong> می‌توانید متن برنامه را در کادر بالا بنویسید یا روی کادر ضربه زده و از <strong>دکمه میکروفون کیبورد آیفون (دیکته صوتی فارسی)</strong> استفاده کنید.
                     </div>
                   } @else {
                     <p class="text-[10px] text-slate-400">
@@ -231,6 +236,7 @@ export class VoiceInputComponent {
   readonly isModalOpen = signal<boolean>(false);
   readonly isReviewing = signal<boolean>(false);
   readonly isTranscribing = signal<boolean>(false);
+  readonly transcriptionError = signal<string | null>(null);
 
   inputText: string = '';
   reviewText: string = '';
@@ -247,18 +253,21 @@ export class VoiceInputComponent {
     this.lastRecordedBlob = null;
     this.isReviewing.set(false);
     this.isTranscribing.set(false);
-    this.isModalOpen.set(true);
+    this.transcriptionError.set(null);
 
     try {
+      this.isModalOpen.set(true);
       await this.recorder.startRecording();
       this.recordingStateChange.emit(true);
     } catch (err) {
+      this.isModalOpen.set(false);
       this.recordingStateChange.emit(false);
     }
   }
 
   async stopAndPrepareReview(): Promise<void> {
     try {
+      this.transcriptionError.set(null);
       this.isTranscribing.set(true);
       const result = await this.recorder.stopRecording();
       this.recordingStateChange.emit(false);
@@ -267,11 +276,12 @@ export class VoiceInputComponent {
       let recognized = (result.transcript || this.recorder.recognizedText() || '').trim();
 
       // If Web Speech API produced no text (typical on Safari, iOS, or unsupported browsers)
-      if (!recognized && result.blob && result.blob.size > 1000) {
+      if (!recognized && result.blob && result.blob.size > 50) {
         try {
           recognized = await this.recorder.transcribeAudioWithWhisper(result.blob);
-        } catch (err) {
+        } catch (err: any) {
           console.warn('Whisper fallback error note:', err);
+          this.transcriptionError.set('تبدیل خودکار صدا با خطا مواجه شد. می‌توانید با کیبورد یا دکمه میکروفون آیفون بنویسید.');
         }
       }
 
@@ -288,9 +298,11 @@ export class VoiceInputComponent {
           setTimeout(() => this.confirmAndSubmit(), 400);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Failed to stop voice recording:', err);
       this.isTranscribing.set(false);
       this.recordingStateChange.emit(false);
+      this.transcriptionError.set('خطا در توقف یا دریافت فایل صوتی.');
     }
   }
 

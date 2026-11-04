@@ -6,6 +6,14 @@ export interface RecordedAudioResult {
   transcript?: string;
 }
 
+function detectIsSafariOrWebKit(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua) || (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+  const isSafariMac = ua.includes('safari') && !ua.includes('chrome') && !ua.includes('chromium') && !ua.includes('android');
+  return isIOS || isSafariMac;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -20,9 +28,7 @@ export class AudioRecorderService {
   readonly durationSeconds = signal<number>(0);
   readonly recordingError = signal<string | null>(null);
   readonly recognizedText = signal<string>('');
-  readonly isSafari = signal<boolean>(
-    typeof navigator !== 'undefined' && /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-  );
+  readonly isSafari = signal<boolean>(detectIsSafariOrWebKit());
 
   /**
    * Check if audio recording is supported in the current browser.
@@ -39,7 +45,8 @@ export class AudioRecorderService {
 
   /**
    * Request microphone permission and start recording.
-   * Also starts Persian Web Speech Recognition if supported.
+   * On Chrome/Edge, also starts Persian Web Speech Recognition.
+   * On Safari/iOS, avoids Web Speech collision and configures MediaRecorder reliably.
    */
   async startRecording(): Promise<void> {
     this.recordingError.set(null);
@@ -48,8 +55,12 @@ export class AudioRecorderService {
     this.recognizedText.set('');
 
     if (!this.isSupported()) {
-      this.recordingError.set('ضبط صدا در مرورگر شما پشتیبانی نمی‌شود.');
-      throw new Error('MediaRecorder not supported');
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        this.recordingError.set('سافاری ضبط صدا را فقط در آدرس‌های امن (HTTPS یا localhost) مجاز می‌داند.');
+      } else {
+        this.recordingError.set('مرورگر شما از قابلیت ضبط صدا پشتیبانی نمی‌کند.');
+      }
+      throw new Error('MediaRecorder or getUserMedia not supported');
     }
 
     try {
@@ -62,20 +73,17 @@ export class AudioRecorderService {
           }
         });
       } catch {
-        // Fallback for Safari / iOS mobile where complex constraints can throw OverconstrainedError
+        // Fallback for Safari / iOS where advanced audio constraints can throw OverconstrainedError
         this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       }
 
       // Pick best supported MIME type (Safari prefers mp4/aac, Chrome prefers webm)
       let mimeType = '';
       if (typeof (window as any).MediaRecorder?.isTypeSupported === 'function') {
-        const candidates = [
-          'audio/webm;codecs=opus',
-          'audio/webm',
-          'audio/mp4',
-          'audio/aac',
-          'audio/ogg'
-        ];
+        const candidates = this.isSafari()
+          ? ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm']
+          : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg'];
+
         for (const cand of candidates) {
           if (MediaRecorder.isTypeSupported(cand)) {
             mimeType = cand;
@@ -93,40 +101,54 @@ export class AudioRecorderService {
         }
       };
 
-      this.mediaRecorder.start(250);
+      // In iOS Safari / WebKit, calling start(timeslice) can cause WebKit Bug 209702/215884
+      // where ondataavailable doesn't fire or produces corrupted mp4 header atoms.
+      // Calling start() without timeslice buffers properly and emits the complete Blob on stop().
+      if (this.isSafari()) {
+        this.mediaRecorder.start();
+      } else {
+        try {
+          this.mediaRecorder.start(250);
+        } catch {
+          this.mediaRecorder.start();
+        }
+      }
       this.isRecording.set(true);
 
-      // Start Web Speech Recognition if available
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        try {
-          this.recognition = new SpeechRecognition();
-          this.recognition.lang = 'fa-IR';
-          // Safari does NOT support continuous recognition and aborts
-          this.recognition.continuous = !this.isSafari();
-          this.recognition.interimResults = true;
-          let fullTranscript = '';
+      // On Safari / iOS WebKit, Apple's SpeechRecognition does NOT support Persian (fa-IR)
+      // and running it concurrently with getUserMedia causes audio session conflicts that kill the recording stream.
+      // We therefore only use Web Speech on non-Safari browsers (Chrome, Edge), and rely on Whisper STT for Safari.
+      if (!this.isSafari()) {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          try {
+            this.recognition = new SpeechRecognition();
+            this.recognition.lang = 'fa-IR';
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
+            let fullTranscript = '';
 
-          this.recognition.onresult = (event: any) => {
-            let interim = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              if (event.results[i].isFinal) {
-                fullTranscript += event.results[i][0].transcript + ' ';
-              } else {
-                interim += event.results[i][0].transcript;
+            this.recognition.onresult = (event: any) => {
+              let interim = '';
+              for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                  fullTranscript += event.results[i][0].transcript + ' ';
+                } else {
+                  interim += event.results[i][0].transcript;
+                }
               }
-            }
-            const current = (fullTranscript + interim).trim();
-            this.recognizedText.set(current);
-          };
+              const current = (fullTranscript + interim).trim();
+              this.recognizedText.set(current);
+            };
 
-          this.recognition.onerror = (e: any) => {
-            console.info('Speech recognition note:', e?.error);
-          };
+            this.recognition.onerror = (e: any) => {
+              console.info('Speech recognition note:', e?.error);
+            };
 
-          this.recognition.start();
-        } catch (e) {
-          console.info('Speech recognition start note:', e);
+            this.recognition.start();
+          } catch (e) {
+            console.info('Speech recognition start note:', e);
+          }
         }
       }
 
@@ -136,7 +158,13 @@ export class AudioRecorderService {
       }, 1000);
     } catch (err: any) {
       console.error('Error starting audio recorder:', err);
-      this.recordingError.set('دسترسی به میکروفون داده نشد یا خطایی رخ داد.');
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+        this.recordingError.set('دسترسی به میکروفون داده نشد. در سافاری روی دکمه aA (تنظیمات سایت) در نوار آدرس بزنید و دسترسی میکروفون را فعال کنید.');
+      } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
+        this.recordingError.set('میکروفونی بر روی دستگاه شما پیدا نشد.');
+      } else {
+        this.recordingError.set('دسترسی به میکروفون با خطا مواجه شد. لطفاً مجوز را بررسی کنید.');
+      }
       this.stopMediaTracks();
       this.isRecording.set(false);
       throw err;
@@ -165,7 +193,10 @@ export class AudioRecorderService {
       const elapsed = this.durationSeconds();
 
       this.mediaRecorder.onstop = () => {
-        const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
+        let mimeType = this.mediaRecorder?.mimeType;
+        if (!mimeType) {
+          mimeType = this.isSafari() ? 'audio/mp4' : 'audio/webm';
+        }
         const blob = new Blob(this.audioChunks, { type: mimeType });
         this.stopMediaTracks();
         this.isRecording.set(false);
@@ -224,13 +255,21 @@ export class AudioRecorderService {
    */
   async transcribeAudioWithWhisper(audioBlob: Blob): Promise<string> {
     const apiKey = localStorage.getItem('tasky_tts_api_key') || 'aa-ygex0aCfxrdMnkLIH1iLDFeAq2jbL5jHcCsR4Xh09klM2Gi3';
-    let ext = 'webm';
-    if (audioBlob.type.includes('mp4')) ext = 'mp4';
-    else if (audioBlob.type.includes('wav')) ext = 'wav';
-    else if (audioBlob.type.includes('aac')) ext = 'm4a';
+    
+    let ext = this.isSafari() ? 'mp4' : 'webm';
+    const type = (audioBlob.type || '').toLowerCase();
+    if (type.includes('mp4')) ext = 'mp4';
+    else if (type.includes('m4a') || type.includes('aac')) ext = 'm4a';
+    else if (type.includes('wav')) ext = 'wav';
+    else if (type.includes('ogg')) ext = 'ogg';
+    else if (type.includes('webm')) ext = 'webm';
+
+    // Ensure blob has a valid type
+    const safeType = audioBlob.type || (ext === 'mp4' ? 'audio/mp4' : ext === 'm4a' ? 'audio/aac' : 'audio/webm');
+    const finalBlob = audioBlob.type ? audioBlob : new Blob([audioBlob], { type: safeType });
 
     const formData = new FormData();
-    formData.append('file', audioBlob, `voice.${ext}`);
+    formData.append('file', finalBlob, `voice.${ext}`);
     formData.append('model', 'whisper-1');
     formData.append('language', 'fa');
 
@@ -243,7 +282,8 @@ export class AudioRecorderService {
     });
 
     if (!res.ok) {
-      throw new Error(`Whisper transcription error status: ${res.status}`);
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Whisper transcription error status: ${res.status} - ${errText}`);
     }
 
     const data = await res.json();
