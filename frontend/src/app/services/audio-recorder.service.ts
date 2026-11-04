@@ -217,4 +217,36 @@ export class AudioRecorderService {
       this.stream = null;
     }
   }
+
+  /**
+   * Neural Speech-to-Text transcription using Whisper API (AvalAI / OpenAI).
+   * High-accuracy fallback for Safari, iOS, and browsers where Web Speech API does not support Persian.
+   */
+  async transcribeAudioWithWhisper(audioBlob: Blob): Promise<string> {
+    const apiKey = localStorage.getItem('tasky_tts_api_key') || 'aa-ygex0aCfxrdMnkLIH1iLDFeAq2jbL5jHcCsR4Xh09klM2Gi3';
+    let ext = 'webm';
+    if (audioBlob.type.includes('mp4')) ext = 'mp4';
+    else if (audioBlob.type.includes('wav')) ext = 'wav';
+    else if (audioBlob.type.includes('aac')) ext = 'm4a';
+
+    const formData = new FormData();
+    formData.append('file', audioBlob, `voice.${ext}`);
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'fa');
+
+    const res = await fetch('https://api.avalai.ir/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: formData
+    });
+
+    if (!res.ok) {
+      throw new Error(`Whisper transcription error status: ${res.status}`);
+    }
+
+    const data = await res.json();
+    return (data.text || '').trim();
+  }
 }

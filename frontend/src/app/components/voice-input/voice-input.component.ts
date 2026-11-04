@@ -78,21 +78,26 @@ import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.compone
 
             <!-- LIVE TRANSCRIPTION SPEECH CARD -->
             <div class="w-full mt-3">
-              @if (recorder.isRecording()) {
+              @if (isTranscribing()) {
+                <div class="p-4 rounded-2xl bg-purple-950/60 border border-purple-500/40 text-purple-200 text-xs font-bold flex items-center justify-center gap-2.5 animate-pulse min-h-[90px]">
+                  <span class="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></span>
+                  <span>در حال تبدیل صدای شما به متن با هوش مصنوعی (Whisper)... ✨</span>
+                </div>
+              } @else if (recorder.isRecording()) {
                 <div class="bg-slate-950/60 border border-white/10 rounded-2xl p-4 min-h-[90px] max-h-[140px] overflow-y-auto text-right backdrop-blur-md shadow-inner flex flex-col justify-between">
                   <p class="text-xs sm:text-sm text-slate-100 font-medium leading-relaxed">
-                    {{ recorder.recognizedText() || (recorder.isSafari() ? 'در حال ضبط صدا... (در سافاری می‌توانید از دکمه میکروفون کیبورد آیفون نیز استفاده کنید)' : 'در حال شنیدن صدای شما... برنامه‌ت رو بگو (مثلاً: فردا ساعت ۱۰ برم ورزش و بعدش جلسه کاری)') }}
+                    {{ recorder.recognizedText() || (recorder.isSafari() ? 'در حال ضبط صدا... پس از اتمام صحبت، متن با هوش مصنوعی تبدیل می‌شود.' : 'در حال شنیدن صدای شما... برنامه‌ت رو بگو (مثلاً: فردا ساعت ۱۰ برم ورزش و بعدش جلسه کاری)') }}
                   </p>
                   <div class="flex items-center justify-end gap-1 text-[10px] text-purple-400 mt-2 font-mono">
                     <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
-                    <span>تایپ هوشمند زنده</span>
+                    <span>{{ recorder.isSafari() ? 'ضبط صدا (سافاری)' : 'تایپ هوشمند زنده' }}</span>
                   </div>
                 </div>
               } @else {
                 <!-- Review State: User can verify and tweak text before finalizing -->
                 <div class="space-y-2 text-right">
                   <label class="block text-[11px] font-bold text-purple-300">
-                    متن پیاده‌شده از صدای شما (در صورت تمایل ویرایش کن):
+                    متن استخراج‌شده از صدای شما (قابل ویرایش):
                   </label>
                   <textarea
                     [(ngModel)]="reviewText"
@@ -102,7 +107,7 @@ import { DynamicAvatarComponent } from '../dynamic-avatar/dynamic-avatar.compone
                   ></textarea>
                   @if (!reviewText.trim()) {
                     <div class="p-2.5 rounded-xl bg-amber-950/50 border border-amber-500/30 text-[11px] text-amber-200 leading-relaxed">
-                      💡 <strong>راهنما برای سافاری / آیفون:</strong> وب‌کیت سافاری از تبدیل خودکار وب به متن فارسی پشتیبانی نمی‌کند. کافیست در کادر بالا متن را بنویسید یا از <strong>میکروفون کیبورد آیفون (دیکته صوتی فارسی)</strong> استفاده فرمایید.
+                      💡 <strong>نکته:</strong> متنی از صدا استخراج نشد. می‌توانید در کادر بالا متن را بنویسید یا از <strong>دکمه میکروفون کیبورد آیفون (دیکته صوتی)</strong> استفاده نمایید.
                     </div>
                   } @else {
                     <p class="text-[10px] text-slate-400">
@@ -225,6 +230,7 @@ export class VoiceInputComponent {
 
   readonly isModalOpen = signal<boolean>(false);
   readonly isReviewing = signal<boolean>(false);
+  readonly isTranscribing = signal<boolean>(false);
 
   inputText: string = '';
   reviewText: string = '';
@@ -240,6 +246,7 @@ export class VoiceInputComponent {
     this.reviewText = '';
     this.lastRecordedBlob = null;
     this.isReviewing.set(false);
+    this.isTranscribing.set(false);
     this.isModalOpen.set(true);
 
     try {
@@ -252,12 +259,24 @@ export class VoiceInputComponent {
 
   async stopAndPrepareReview(): Promise<void> {
     try {
+      this.isTranscribing.set(true);
       const result = await this.recorder.stopRecording();
       this.recordingStateChange.emit(false);
 
       this.lastRecordedBlob = result.blob;
-      const recognized = (result.transcript || this.recorder.recognizedText() || '').trim();
+      let recognized = (result.transcript || this.recorder.recognizedText() || '').trim();
+
+      // If Web Speech API produced no text (typical on Safari, iOS, or unsupported browsers)
+      if (!recognized && result.blob && result.blob.size > 1000) {
+        try {
+          recognized = await this.recorder.transcribeAudioWithWhisper(result.blob);
+        } catch (err) {
+          console.warn('Whisper fallback error note:', err);
+        }
+      }
+
       this.reviewText = recognized;
+      this.isTranscribing.set(false);
       this.isReviewing.set(true);
 
       // Check for voice confirmation (e.g. if the user concluded by saying "تایید")
@@ -270,6 +289,7 @@ export class VoiceInputComponent {
         }
       }
     } catch (err) {
+      this.isTranscribing.set(false);
       this.recordingStateChange.emit(false);
     }
   }
