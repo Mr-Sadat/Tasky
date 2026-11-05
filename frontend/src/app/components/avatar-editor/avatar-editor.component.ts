@@ -33,12 +33,12 @@ export type AvatarEditorTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'a
   imports: [CommonModule],
   template: `
     <div class="space-y-4" dir="rtl">
-      <!-- CATEGORY TABS -->
-      <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950/80 border border-white/10 overflow-x-auto flex-nowrap scrollbar-none select-none">
+      <!-- CATEGORY TABS WITH SMOOTH HIDDEN SCROLL -->
+      <div class="flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-950/80 border border-white/10 overflow-x-auto flex-nowrap scrollbar-none no-scrollbar scroll-smooth touch-pan-x select-none">
         <button
           type="button"
           (click)="activeTab = 'face'"
-          class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
           [ngClass]="activeTab === 'face' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/5'"
         >
           <span>👤</span>
@@ -48,7 +48,7 @@ export type AvatarEditorTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'a
         <button
           type="button"
           (click)="activeTab = 'hair'"
-          class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
           [ngClass]="activeTab === 'hair' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/5'"
         >
           <span>💇‍♀️</span>
@@ -58,7 +58,7 @@ export type AvatarEditorTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'a
         <button
           type="button"
           (click)="activeTab = 'eyes'"
-          class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
           [ngClass]="activeTab === 'eyes' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/5'"
         >
           <span>👁️</span>
@@ -68,7 +68,7 @@ export type AvatarEditorTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'a
         <button
           type="button"
           (click)="activeTab = 'mouth'"
-          class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
           [ngClass]="activeTab === 'mouth' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/5'"
         >
           <span>👄</span>
@@ -78,7 +78,7 @@ export type AvatarEditorTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'a
         <button
           type="button"
           (click)="activeTab = 'outfit'"
-          class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
           [ngClass]="activeTab === 'outfit' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/5'"
         >
           <span>👕</span>
@@ -88,7 +88,7 @@ export type AvatarEditorTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'a
         <button
           type="button"
           (click)="activeTab = 'accessories'"
-          class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0"
           [ngClass]="activeTab === 'accessories' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/5'"
         >
           <span>👓</span>
@@ -103,15 +103,16 @@ export type AvatarEditorTab = 'face' | 'hair' | 'eyes' | 'mouth' | 'outfit' | 'a
           <div class="space-y-4 animate-fade-in">
             <div>
               <label class="block text-xs font-bold text-slate-300 mb-2">رنگ پوست:</label>
-              <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              <!-- Horizontal Smooth Scrolling Skin Tones (Hidden Scrollbar) -->
+              <div class="flex items-center gap-2 overflow-x-auto flex-nowrap scrollbar-none no-scrollbar scroll-smooth touch-pan-x pb-1">
                 @for (skin of skinTones; track skin.id) {
                   <button
                     type="button"
                     (click)="update({ skinTone: skin.id })"
-                    class="p-2 rounded-2xl border flex flex-col items-center gap-1.5 transition cursor-pointer interactive-spring"
+                    class="p-2.5 rounded-2xl border flex flex-col items-center gap-1.5 transition cursor-pointer interactive-spring shrink-0 min-w-[76px]"
                     [ngClass]="customization.skinTone === skin.id ? 'border-purple-400 bg-purple-950/40 ring-2 ring-purple-400/50' : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'"
                   >
-                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs text-slate-900 font-black shadow-md" [style.background-color]="skin.hex">
+                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs text-slate-900 font-black shadow-md shrink-0" [style.background-color]="skin.hex">
                       @if (customization.skinTone === skin.id) { ✓ }
                     </span>
                     <span class="text-[10px] text-slate-300 truncate w-full text-center font-medium">{{ skin.name }}</span>

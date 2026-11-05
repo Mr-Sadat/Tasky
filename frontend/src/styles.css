@@ -1,11 +1,16 @@
 @import "tailwindcss";
 
 @layer base {
-  :root {
+  :root, [data-theme="dark-neon"], [data-theme="purple"] {
     --font-sans: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --bg-base: #0F111A;
     --surface-card: #1A1D2B;
+    --surface-card-subtle: #141724;
     --surface-card-border: rgba(255, 255, 255, 0.08);
+    --text-main: #FFFFFF;
+    --text-sub: #94A3B8;
+    --text-muted: #64748B;
+    --nav-bg: rgba(26, 29, 43, 0.88);
     --cta-gradient: linear-gradient(135deg, #7C3AED 0%, #DB2777 100%);
     --status-success: #10B981;
     --status-urgent: #EF4444;
@@ -14,14 +19,38 @@
     --color-secondary: #DB2777;
   }
 
-  [data-theme="purple"], [data-theme="dark-neon"] {
-    --color-primary: #7C3AED;
-    --color-secondary: #DB2777;
+  [data-theme="cyber-sunset"] {
+    --bg-base: #160D24;
+    --surface-card: #261438;
+    --surface-card-subtle: #1D0E2E;
+    --surface-card-border: rgba(244, 63, 94, 0.18);
+    --text-main: #FFFFFF;
+    --text-sub: #FBCFE8;
+    --text-muted: #F472B6;
+    --nav-bg: rgba(38, 20, 56, 0.88);
+    --cta-gradient: linear-gradient(135deg, #F59E0B 0%, #EC4899 50%, #8B5CF6 100%);
+    --status-success: #10B981;
+    --status-urgent: #EF4444;
+    --status-warning: #F59E0B;
+    --color-primary: #F59E0B;
+    --color-secondary: #EC4899;
   }
 
-  [data-theme="cyber-sunset"] {
-    --color-primary: #F59E0B;
-    --color-secondary: #DB2777;
+  [data-theme="light"], .theme-light {
+    --bg-base: #F8FAFC;
+    --surface-card: #FFFFFF;
+    --surface-card-subtle: #F1F5F9;
+    --surface-card-border: rgba(15, 23, 42, 0.09);
+    --text-main: #0F172A;
+    --text-sub: #334155;
+    --text-muted: #64748B;
+    --nav-bg: rgba(255, 255, 255, 0.92);
+    --cta-gradient: linear-gradient(135deg, #6366F1 0%, #D946EF 100%);
+    --status-success: #10B981;
+    --status-urgent: #EF4444;
+    --status-warning: #F59E0B;
+    --color-primary: #6366F1;
+    --color-secondary: #D946EF;
   }
 
   [data-theme="mint"] {
@@ -48,7 +77,65 @@
     font-family: var(--font-sans);
     direction: rtl;
     text-align: right;
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
+}
+
+/* Hide scrollbars on horizontal menus while keeping touch/scroll functionality */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Dynamic theme helper utility classes */
+.tasky-bg-base {
+  background-color: var(--bg-base) !important;
+}
+
+.tasky-card {
+  background-color: var(--surface-card) !important;
+  border-color: var(--surface-card-border) !important;
+  color: var(--text-main) !important;
+}
+
+.tasky-card-subtle {
+  background-color: var(--surface-card-subtle) !important;
+  border-color: var(--surface-card-border) !important;
+}
+
+.tasky-text-main {
+  color: var(--text-main) !important;
+}
+
+.tasky-text-sub {
+  color: var(--text-sub) !important;
+}
+
+.tasky-text-muted {
+  color: var(--text-muted) !important;
+}
+
+.tasky-border {
+  border-color: var(--surface-card-border) !important;
+}
+
+.tasky-nav {
+  background-color: var(--nav-bg) !important;
+  border-color: var(--surface-card-border) !important;
+}
+
+.tasky-cta {
+  background-image: var(--cta-gradient) !important;
 }
 
 /* Custom scrollbars */

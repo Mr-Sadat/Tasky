@@ -59,8 +59,8 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
         </button>
       </div>
 
-      <!-- Tab Navigation with Horizontal Scroll -->
-      <div class="flex items-center gap-1.5 my-3 p-1.5 rounded-2xl bg-slate-950/60 backdrop-blur-md border border-white/10 shrink-0 overflow-x-auto flex-nowrap scrollbar-none">
+      <!-- Tab Navigation with Horizontal Scroll (Hidden Scrollbar) -->
+      <div class="flex items-center gap-1.5 my-3 p-1.5 rounded-2xl bg-slate-950/60 backdrop-blur-md border border-white/10 shrink-0 overflow-x-auto flex-nowrap scrollbar-none no-scrollbar scroll-smooth touch-pan-x select-none">
         <button
           type="button"
           (click)="activeTab.set('general')"
@@ -130,7 +130,7 @@ type ProfileTab = 'general' | 'occasions' | 'catchphrases' | 'guidelines' | 'ava
             : 'text-slate-400 hover:text-white hover:bg-white/5'"
         >
           <span>⚙️</span>
-          <span>پشتیبان و حریم خصوصی</span>
+          <span>پشتیبان‌گیری و تنظیمات</span>
         </button>
       </div>
 

@@ -125,36 +125,75 @@ import { getTodayIso } from '../../utils/jalali';
         </div>
 
         <!-- ACTION BUTTONS BELOW STORY CARD -->
-        <div class="w-full flex items-center justify-between gap-2 px-1">
-          <!-- Download Image Button -->
-          <button
-            type="button"
-            (click)="downloadStoryImage()"
-            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-purple-950/50 interactive-spring cursor-pointer border border-purple-400/40 select-none transition"
-          >
-            <span>📸</span>
-            <span>دانلود استوری</span>
-          </button>
+        <div class="w-full flex flex-col gap-2 px-1">
+          <!-- Social Sharing Buttons Grid -->
+          <div class="grid grid-cols-3 gap-2">
+            <!-- Instagram Story Button -->
+            <button
+              type="button"
+              (click)="shareToInstagram()"
+              class="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-2xl bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:brightness-110 text-white text-xs font-bold shadow-lg shadow-pink-950/40 interactive-spring cursor-pointer border border-pink-400/30 select-none transition truncate"
+              title="اشتراک‌گذاری در استوری اینستاگرام"
+            >
+              <span>📸</span>
+              <span>استوری</span>
+            </button>
 
-          <!-- Copy Text Button -->
-          <button
-            type="button"
-            (click)="copyRecapText()"
-            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-purple-200 hover:text-white text-xs font-bold shadow-md border border-slate-700/80 interactive-spring cursor-pointer select-none transition"
-          >
-            <span>📋</span>
-            <span>کپی متن</span>
-          </button>
+            <!-- WhatsApp Button -->
+            <button
+              type="button"
+              (click)="shareToWhatsApp()"
+              class="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-2xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold shadow-lg shadow-emerald-950/40 interactive-spring cursor-pointer border border-emerald-400/30 select-none transition truncate"
+              title="ارسال کارنامه در واتساپ"
+            >
+              <span>💬</span>
+              <span>واتساپ</span>
+            </button>
 
-          <!-- Close Button -->
-          <button
-            type="button"
-            (click)="close.emit()"
-            class="w-10 h-10 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center border border-slate-700/80 interactive-spring cursor-pointer select-none"
-            title="بستن"
-          >
-            ✕
-          </button>
+            <!-- Telegram Button -->
+            <button
+              type="button"
+              (click)="shareToTelegram()"
+              class="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-2xl bg-[#229ED9] hover:bg-[#1e8bc0] text-white text-xs font-bold shadow-lg shadow-sky-950/40 interactive-spring cursor-pointer border border-sky-400/30 select-none transition truncate"
+              title="ارسال کارنامه در تلگرام"
+            >
+              <span>✈️</span>
+              <span>تلگرام</span>
+            </button>
+          </div>
+
+          <!-- Secondary Actions Row: Copy Text & Download & Close -->
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="downloadStoryImage()"
+              class="flex-1 flex items-center justify-center gap-1 py-2 px-3 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white text-xs font-bold border border-purple-500/40 interactive-spring cursor-pointer select-none transition"
+              title="دانلود تصویر با کیفیت ۱۰۸۰ در ۱۹۲۰"
+            >
+              <span>📥</span>
+              <span>دانلود تصویر</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="copyRecapText()"
+              class="flex-1 flex items-center justify-center gap-1 py-2 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white text-xs font-bold border border-slate-700/80 interactive-spring cursor-pointer select-none transition"
+              title="کپی متن کارنامه"
+            >
+              <span>📋</span>
+              <span>کپی متن</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="close.emit()"
+              class="w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center border border-slate-700/80 interactive-spring cursor-pointer select-none shrink-0"
+              title="بستن"
+              aria-label="بستن پنجره"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -254,17 +293,21 @@ export class DailyRecapModalComponent {
     this.close.emit();
   }
 
-  copyRecapText(): void {
+  getShareText(): string {
     const name = this.userProfile?.name || 'من';
     const percent = this.getCompletionPercent();
-    const text = 
-`✨ کارنامه امروز ${name} در تَسکی:
+    return `✨ کارنامه امروز ${name} در برنامه‌ریز تَسکی (Tasky):
 📅 تاریخ: ${this.formattedDate}
-🎯 میزان موفقیت: ${percent}% (${this.completedTasksCount} از ${this.totalTasksCount} تسک)
+🎯 میزان موفقیت: ${percent}٪ (${this.completedTasksCount} از ${this.totalTasksCount} تسک انجام شد)
 ⏱️ زمان مفید کل: ${this.totalDurationFormatted()}
 💬 "${this.getAIQuote()}"
-💜 برنامه‌ریزی هوشمند با #تَسکی`;
 
+💜 برنامه‌ریزی هوشمند روزانه با هوش مصنوعی و صوت
+🔗 https://mr-sadat.github.io/Tasky/`;
+  }
+
+  copyRecapText(): void {
+    const text = this.getShareText();
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(text).then(() => {
         this.toast.emit('متن کارنامه با موفقیت در کلیپ‌بورد کپی شد! 📋✨');
@@ -274,18 +317,70 @@ export class DailyRecapModalComponent {
     }
   }
 
+  shareToInstagram(): void {
+    const canvas = this.generateStoryCanvas();
+    if (!canvas) {
+      this.toast.emit('خطا در تولید تصویر استوری.');
+      return;
+    }
+
+    canvas.toBlob(async (blob) => {
+      if (blob && typeof navigator !== 'undefined' && (navigator as any).canShare) {
+        const file = new File([blob], 'tasky-story.png', { type: 'image/png' });
+        if ((navigator as any).canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: 'کارنامه روزانه من در تَسکی',
+              text: this.getShareText(),
+              files: [file],
+            });
+            this.toast.emit('پنجره اشتراک‌گذاری باز شد! گزینه Instagram Stories را انتخاب کنید 📸✨');
+            return;
+          } catch (err: any) {
+            // User cancelled or share dismissed
+            if (err?.name === 'AbortError') return;
+          }
+        }
+      }
+
+      // Fallback: download canvas image and copy text
+      this.downloadStoryImage();
+      this.copyRecapText();
+      this.toast.emit('تصویر استوری دانلود شد! می‌توانید آن را در استوری اینستاگرام خود قرار دهید 📸✨');
+    }, 'image/png');
+  }
+
+  shareToWhatsApp(): void {
+    const text = this.getShareText();
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+      this.toast.emit('در حال انتقال به واتساپ... 💬');
+    }
+  }
+
+  shareToTelegram(): void {
+    const text = this.getShareText();
+    const appUrl = 'https://mr-sadat.github.io/Tasky/';
+    const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(text)}`;
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+      this.toast.emit('در حال انتقال به تلگرام... ✈️');
+    }
+  }
+
   /**
-   * Generates a high-resolution 1080x1920 Instagram Story image using HTML5 Canvas.
+   * Helper to build and draw on the HTML5 Canvas
    */
-  downloadStoryImage(): void {
+  private generateStoryCanvas(): HTMLCanvasElement | null {
     try {
       const canvas = document.createElement('canvas');
       canvas.width = 1080;
       canvas.height = 1920;
       const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      if (!ctx) return null;
 
-      // 1. Draw Background Gradient
+      // 1. Background Gradient
       const grad = ctx.createLinearGradient(0, 0, 0, 1920);
       grad.addColorStop(0, '#1e1b4b');
       grad.addColorStop(0.5, '#2e1065');
@@ -293,7 +388,7 @@ export class DailyRecapModalComponent {
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 1080, 1920);
 
-      // 2. Draw Decorative Ambient Circles
+      // 2. Decorative Ambient Circles
       ctx.beginPath();
       ctx.arc(200, 300, 250, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(168, 85, 247, 0.15)';
@@ -348,102 +443,115 @@ export class DailyRecapModalComponent {
       ctx.font = 'bold 56px sans-serif';
       ctx.fillText(`کارنامه ${name}`, 540, 740);
 
-      ctx.fillStyle = '#f3e8ff';
-      ctx.font = '38px sans-serif';
-      ctx.fillText(this.getEncouragementTitle(), 540, 805);
+      ctx.fillStyle = '#e9d5ff';
+      ctx.font = '34px sans-serif';
+      ctx.fillText(this.getEncouragementTitle(), 540, 800);
 
-      // 6. Progress Card
-      this.roundRect(ctx, 160, 890, 760, 220, 40);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      // 6. Stats Section Box
+      this.roundRect(ctx, 140, 880, 800, 420, 40);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 3;
       ctx.stroke();
 
+      // Progress Bar
+      const percent = this.getCompletionPercent();
       ctx.textAlign = 'right';
-      ctx.fillStyle = '#e9d5ff';
-      ctx.font = 'bold 38px sans-serif';
-      ctx.fillText('میزان موفقیت امروز:', 880, 965);
+      ctx.font = 'bold 36px sans-serif';
+      ctx.fillStyle = '#d8b4fe';
+      ctx.fillText('میزان موفقیت روزانه:', 880, 960);
 
       ctx.textAlign = 'left';
-      ctx.fillStyle = '#34d399';
-      ctx.font = 'bold 44px monospace';
-      ctx.fillText(`${this.getCompletionPercent()}%`, 200, 965);
+      ctx.fillStyle = '#6ee7b7';
+      ctx.fillText(`${percent}%`, 200, 960);
 
-      // Progress bar track
-      this.roundRect(ctx, 200, 1010, 680, 30, 15);
+      // Progress Track
+      this.roundRect(ctx, 200, 990, 680, 30, 15);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
       ctx.fill();
 
-      // Progress bar fill
-      const fillW = Math.max(30, (680 * this.getCompletionPercent()) / 100);
-      this.roundRect(ctx, 200, 1010, fillW, 30, 15);
-      const barGrad = ctx.createLinearGradient(200, 0, 880, 0);
-      barGrad.addColorStop(0, '#34d399');
-      barGrad.addColorStop(1, '#2dd4bf');
-      ctx.fillStyle = barGrad;
+      // Progress Fill
+      const fillW = Math.max(30, (680 * percent) / 100);
+      this.roundRect(ctx, 200, 990, fillW, 30, 15);
+      const fillGrad = ctx.createLinearGradient(200, 0, 880, 0);
+      fillGrad.addColorStop(0, '#10b981');
+      fillGrad.addColorStop(1, '#06b6d4');
+      ctx.fillStyle = fillGrad;
       ctx.fill();
 
-      // 7. Two Metrics Boxes
-      // Box 1: Completed Tasks
-      this.roundRect(ctx, 160, 1150, 360, 190, 36);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-      ctx.stroke();
-
+      // Sub Metrics
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#c084fc';
-      ctx.font = '32px sans-serif';
-      ctx.fillText('تسک‌های انجام‌شده', 340, 1220);
-
+      ctx.font = 'bold 36px sans-serif';
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 48px monospace';
-      ctx.fillText(`${this.completedTasksCount} / ${this.totalTasksCount}`, 340, 1290);
+      ctx.fillText(`✅ ${this.completedTasksCount} از ${this.totalTasksCount} تسک`, 340, 1110);
+      ctx.fillText(`⏱️ ${this.totalDurationFormatted()} زمان مفید`, 700, 1110);
 
-      // Box 2: Total Duration
-      this.roundRect(ctx, 560, 1150, 360, 190, 36);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-      ctx.stroke();
-
-      ctx.fillStyle = '#c084fc';
-      ctx.font = '32px sans-serif';
-      ctx.fillText('زمان مفید کل', 740, 1220);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 44px sans-serif';
-      ctx.fillText(this.totalDurationFormatted(), 740, 1290);
-
-      // 8. Quote Box
-      this.roundRect(ctx, 160, 1380, 760, 200, 36);
+      // 7. AI Quote Box
+      this.roundRect(ctx, 140, 1340, 800, 240, 40);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 3;
       ctx.stroke();
 
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#f3e8ff';
       ctx.font = 'italic 34px sans-serif';
-      ctx.fillText(`"${this.getAIQuote()}"`, 540, 1495);
+      ctx.fillStyle = '#f3e8ff';
+      this.wrapText(ctx, `"${this.getAIQuote()}"`, 540, 1430, 720, 50);
 
-      // 9. Footer
+      // 8. Footer
       ctx.fillStyle = '#a855f7';
       ctx.font = 'bold 32px sans-serif';
-      ctx.fillText('✨ برنامه‌ریزی صوتی روزانه با تَسکی | tasky.ai', 540, 1720);
+      ctx.fillText('✨ تَسکی: دستیار و برنامه‌ریز هوشمند صوتی', 540, 1680);
 
-      // 10. Download Data URL
-      const dataUrl = canvas.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = `tasky-recap-${getTodayIso()}.png`;
-      a.click();
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '28px monospace';
+      ctx.fillText('mr-sadat.github.io/Tasky', 540, 1740);
 
-      this.toast.emit('تصویر استوری با کیفیت بالا دانلود شد! 📸✨');
+      return canvas;
     } catch (e) {
-      console.error('Error generating story image:', e);
-      this.toast.emit('خطا در دانلود تصویر استوری.');
+      console.warn('Canvas story generation error:', e);
+      return null;
     }
+  }
+
+  /**
+   * Generates a high-resolution 1080x1920 Instagram Story image using HTML5 Canvas.
+   */
+  downloadStoryImage(): void {
+    const canvas = this.generateStoryCanvas();
+    if (!canvas) return;
+
+    try {
+      const link = document.createElement('a');
+      link.download = `tasky-story-${getTodayIso()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      this.toast.emit('تصویر استوری دانلود شد! 📸');
+    } catch (e) {
+      this.toast.emit('خطا در دانلود استوری.');
+    }
+  }
+
+  private wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number): void {
+    const words = text.split(' ');
+    let line = '';
+
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      const testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        ctx.fillText(line, x, y);
+        line = words[n] + ' ';
+        y += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, x, y);
   }
 
   private roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {

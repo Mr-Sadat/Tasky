@@ -15,6 +15,7 @@ export interface Task {
   notification_text?: string;
   is_completed: boolean;
   date: string;
+  order?: number;
   jalali_date?: string;
   jalali_display?: string;
   jalali_day_name?: string;

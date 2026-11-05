@@ -516,8 +516,37 @@ export class ApiService {
       filtered = [...userTasks, ...occasions];
     }
 
-    filtered.sort((a, b) => (a.scheduled_time || '12:00').localeCompare(b.scheduled_time || '12:00'));
+    filtered.sort((a, b) => {
+      const timeA = (a.scheduled_time || '99:99').trim();
+      const timeB = (b.scheduled_time || '99:99').trim();
+      const timeComp = timeA.localeCompare(timeB);
+      if (timeComp !== 0) return timeComp;
+      const orderA = typeof a.order === 'number' ? a.order : 0;
+      const orderB = typeof b.order === 'number' ? b.order : 0;
+      if (orderA !== orderB) return orderA - orderB;
+      return String(a.id).localeCompare(String(b.id));
+    });
     return of(filtered).pipe(delay(50));
+  }
+
+  /**
+   * Persist reordered tasks for a day
+   */
+  updateTasksOrder(reorderedList: Task[]): Observable<boolean> {
+    const allStored = this.getStoredTasks();
+    for (let i = 0; i < reorderedList.length; i++) {
+      const item = reorderedList[i];
+      item.order = i;
+      const existing = allStored.find((t) => String(t.id) === String(item.id));
+      if (existing) {
+        existing.order = i;
+        if (item.scheduled_time) {
+          existing.scheduled_time = item.scheduled_time;
+        }
+      }
+    }
+    this.saveStoredTasks(allStored);
+    return of(true);
   }
 
   /**

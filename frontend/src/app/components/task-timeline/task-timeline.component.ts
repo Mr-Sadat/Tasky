@@ -49,15 +49,15 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
       </div>
 
       <!-- Horizontal Persian Jalali Date Bar -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-2 pt-1 no-scrollbar select-none">
+      <div class="flex items-center gap-2 overflow-x-auto pb-2 pt-1 no-scrollbar scrollbar-none scroll-smooth touch-pan-x select-none">
         @for (tab of dateTabs; track tab.dateValue) {
           <button
             type="button"
             (click)="selectDate(tab.dateValue)"
-            class="shrink-0 flex flex-col items-center justify-center px-3.5 py-2 rounded-2xl border text-xs transition-all duration-200 cursor-pointer min-w-[70px]"
+            class="shrink-0 flex flex-col items-center justify-center px-3.5 py-2 rounded-2xl border text-xs transition-all duration-200 cursor-pointer min-w-[70px] tasky-card"
             [ngClass]="selectedDate === tab.dateValue
               ? 'bg-gradient-to-r from-[#7C3AED] to-[#DB2777] text-white border-transparent font-bold shadow-md'
-              : 'bg-[#1A1D2B] border-white/[0.08] text-slate-300 hover:border-purple-500/30 hover:bg-white/5'"
+              : 'tasky-card hover:border-purple-500/30 hover:bg-white/5'"
           >
             <span class="font-bold">{{ tab.label }}</span>
             @if (tab.subLabel) {
@@ -69,10 +69,10 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
 
       <!-- Empty State -->
       @if (tasks.length === 0) {
-        <div class="text-center py-12 px-4 rounded-2xl bg-[#1A1D2B]/60 border border-dashed border-white/10 backdrop-blur-xl">
+        <div class="text-center py-12 px-4 rounded-2xl tasky-card border border-dashed border-white/10 backdrop-blur-xl">
           <div class="text-4xl mb-3 select-none">🗓️</div>
-          <h3 class="text-sm font-bold text-slate-200 mb-1">هنوز برنامه‌ای برای این تاریخ نداری!</h3>
-          <p class="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+          <h3 class="text-sm font-bold tasky-text-main mb-1">هنوز برنامه‌ای برای این تاریخ نداری!</h3>
+          <p class="text-xs tasky-text-muted max-w-xs mx-auto leading-relaxed">
             دکمه میکروفون پایین رو لمس کن و کارهایی که می‌خوای انجام بدی رو بگو تا تَسکی هوشمندانه زمان‌بندی کنه.
           </p>
         </div>
@@ -80,16 +80,16 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
 
       <!-- Timeline Decluttered Task Cards -->
       <div class="space-y-3">
-        @for (task of tasks; track task.id) {
+        @for (task of tasks; track task.id; let i = $index) {
           @let isActive = isTaskActive(task);
           <div
-            class="group relative overflow-visible rounded-2xl border transition-all duration-300 p-3.5 backdrop-blur-md flex flex-col justify-between"
+            class="group relative overflow-visible rounded-2xl border transition-all duration-300 p-3.5 backdrop-blur-md flex flex-col justify-between tasky-card"
             [ngClass]="[
               task.is_completed 
-                ? 'bg-[#1A1D2B]/50 border-white/[0.04] opacity-55' 
+                ? 'opacity-55' 
                 : isActive
-                  ? 'ring-1 ring-purple-500/80 shadow-lg shadow-purple-900/30 bg-[#1A1D2B] border-purple-500/40'
-                  : 'bg-[#1A1D2B] border-white/[0.08] hover:border-purple-500/30'
+                  ? 'ring-1 ring-purple-500/80 shadow-lg shadow-purple-900/30 border-purple-500/40'
+                  : 'hover:border-purple-500/30'
             ]"
           >
             <div class="flex items-start justify-between gap-3">
@@ -114,7 +114,7 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                 </button>
 
                 <!-- Category Emoji Box -->
-                <div class="shrink-0 w-9 h-9 rounded-xl bg-slate-900/70 border border-white/[0.06] flex items-center justify-center text-base select-none">
+                <div class="shrink-0 w-9 h-9 rounded-xl tasky-card-subtle border border-white/[0.06] flex items-center justify-center text-base select-none">
                   {{ getCategoryEmoji(task.icon) }}
                 </div>
 
@@ -124,7 +124,7 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                     class="text-sm font-medium leading-relaxed break-words transition-colors"
                     [class.text-slate-400]="task.is_completed"
                     [class.line-through]="task.is_completed"
-                    [class.text-white]="!task.is_completed"
+                    [class.tasky-text-main]="!task.is_completed"
                   >
                     {{ task.title }}
                   </h4>
@@ -157,8 +157,34 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                 </div>
               </div>
 
-              <!-- Left: Focus Pomodoro Button + 3-Dots Action Menu -->
+              <!-- Left: Reorder Arrows + Focus Pomodoro Button + 3-Dots Action Menu -->
               <div class="flex items-center gap-1.5 shrink-0">
+                <!-- Reorder Up / Down Buttons -->
+                <div class="flex flex-col gap-0.5 justify-center">
+                  <button
+                    type="button"
+                    (click)="moveTaskUp(i, $event)"
+                    [disabled]="i === 0"
+                    [class.opacity-20]="i === 0"
+                    class="w-6 h-4 rounded bg-white/5 hover:bg-purple-600/30 flex items-center justify-center text-[9px] text-slate-300 hover:text-white transition disabled:cursor-not-allowed cursor-pointer"
+                    title="انتقال به بالا"
+                    aria-label="انتقال تسک به بالا"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    (click)="moveTaskDown(i, $event)"
+                    [disabled]="i === tasks.length - 1"
+                    [class.opacity-20]="i === tasks.length - 1"
+                    class="w-6 h-4 rounded bg-white/5 hover:bg-purple-600/30 flex items-center justify-center text-[9px] text-slate-300 hover:text-white transition disabled:cursor-not-allowed cursor-pointer"
+                    title="انتقال به پایین"
+                    aria-label="انتقال تسک به پایین"
+                  >
+                    ▼
+                  </button>
+                </div>
+
                 @if (!task.is_completed) {
                   <!-- Focus Pomodoro Button -->
                   <button
@@ -187,9 +213,31 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                   <!-- Floating Popover Action Menu -->
                   @if (openMenuTaskId() === task.id) {
                     <div 
-                      class="absolute left-0 top-10 z-40 w-44 rounded-2xl bg-[#1A1D2B] border border-white/[0.12] shadow-2xl backdrop-blur-2xl p-1.5 space-y-1 text-right animate-fade-in"
+                      class="absolute left-0 top-10 z-40 w-44 rounded-2xl tasky-card border border-white/[0.12] shadow-2xl backdrop-blur-2xl p-1.5 space-y-1 text-right animate-fade-in"
                       (click)="$event.stopPropagation()"
                     >
+                      <button
+                        type="button"
+                        [disabled]="i === 0"
+                        (click)="moveTaskUp(i, $event); closeMenu()"
+                        class="w-full px-2.5 py-1.5 rounded-xl hover:bg-white/5 text-xs tasky-text-main flex items-center justify-between cursor-pointer transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <span>انتقال یک ردیف بالاتر</span>
+                        <span class="text-xs">▲</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        [disabled]="i === tasks.length - 1"
+                        (click)="moveTaskDown(i, $event); closeMenu()"
+                        class="w-full px-2.5 py-1.5 rounded-xl hover:bg-white/5 text-xs tasky-text-main flex items-center justify-between cursor-pointer transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <span>انتقال یک ردیف پایین‌تر</span>
+                        <span class="text-xs">▼</span>
+                      </button>
+
+                      <div class="h-px bg-white/5 my-1"></div>
+
                       @if (!task.is_completed) {
                         <button
                           type="button"
@@ -293,6 +341,37 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
   @Output() breakdownTask = new EventEmitter<Task>();
   @Output() openCalendar = new EventEmitter<void>();
   @Output() startFocus = new EventEmitter<Task>();
+  @Output() reorderTasks = new EventEmitter<Task[]>();
+
+  moveTaskUp(index: number, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (index <= 0 || index >= this.tasks.length) return;
+    this.swapTasks(index, index - 1);
+  }
+
+  moveTaskDown(index: number, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (index < 0 || index >= this.tasks.length - 1) return;
+    this.swapTasks(index, index + 1);
+  }
+
+  private swapTasks(indexA: number, indexB: number): void {
+    const list = [...this.tasks];
+    const taskA = { ...list[indexA] };
+    const taskB = { ...list[indexB] };
+
+    // Swap their scheduled_time if both exist so they remain naturally ordered by time
+    if (taskA.scheduled_time && taskB.scheduled_time && taskA.scheduled_time !== taskB.scheduled_time) {
+      const tempTime = taskA.scheduled_time;
+      taskA.scheduled_time = taskB.scheduled_time;
+      taskB.scheduled_time = tempTime;
+    }
+
+    list[indexA] = taskB;
+    list[indexB] = taskA;
+    this.tasks = list;
+    this.reorderTasks.emit(list);
+  }
 
   private clockTimer: any;
   readonly nowMinutes = signal<number>(this.calculateNowMinutes());

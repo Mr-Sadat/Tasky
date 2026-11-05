@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from './services/api.service';
 import { NotificationService } from './services/notification.service';
@@ -57,18 +57,97 @@ export class App implements OnInit {
   readonly themeService = inject(ThemeService);
   readonly ttsService = inject(TtsService);
 
-  // Active Tab navigation: 'home' | 'profile'
-  readonly activeNavTab = signal<'home' | 'profile'>('home');
-  readonly showAllTimeline = signal<boolean>(false);
+  // Active Tab navigation: 'tasks' (صفحه اصلی) | 'dashboard' (داشبورد هوشمند با effect) | 'profile' (پروفایل و تنظیمات)
+  readonly activeNavTab = signal<'tasks' | 'dashboard' | 'profile'>('tasks');
+  readonly showAllTimeline = signal<boolean>(true);
 
-  // App Atmosphere & Settings
-  readonly appAtmosphere = signal<'dark_neon' | 'cyber_sunset'>('dark_neon');
+  // App Atmosphere & Settings (دارک نئون، غروب سایبری، تم روشن)
+  readonly appAtmosphere = signal<'dark_neon' | 'cyber_sunset' | 'light'>('dark_neon');
   readonly profileInterests = signal<string[]>(['coding', 'creative']);
   readonly aiPersonality = signal<string>('رفیق پرانرژی');
   readonly voiceNudgesEnabled = signal<boolean>(true);
   readonly isVoiceDraftPlaying = signal<boolean>(false);
   readonly voiceDraftsCount = signal<number>(2);
   readonly voiceMemosStat = signal<number>(47);
+
+  // PWA Install Tutorial States
+  readonly isPwaTutorialOpen = signal<boolean>(false);
+  readonly pwaTutorialPlatform = signal<'ios' | 'android'>('ios');
+  readonly canInstallPwa = signal<boolean>(false);
+  private deferredPrompt: any = null;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      const savedAtmosphere = localStorage.getItem('tasky_app_atmosphere') as 'dark_neon' | 'cyber_sunset' | 'light' | null;
+      if (savedAtmosphere) {
+        this.appAtmosphere.set(savedAtmosphere);
+      }
+    }
+
+    // Effect 1: Dashboard Analytics & State Synchronization via Angular effect()
+    effect(() => {
+      const all = this.tasks();
+      const completed = all.filter(t => t.is_completed).length;
+      const total = all.length;
+      const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+      const streak = this.streakDays();
+      const atmosphere = this.appAtmosphere();
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('tasky_dashboard_analytics', JSON.stringify({
+            completed,
+            total,
+            completionRate: rate,
+            streak,
+            atmosphere,
+            updatedAt: Date.now()
+          }));
+        } catch (e) {
+          console.warn('Dashboard effect sync error:', e);
+        }
+      }
+    });
+
+    // Effect 2: Reactive Theme / Atmosphere DOM Synchronization
+    effect(() => {
+      const mode = this.appAtmosphere();
+      if (typeof document !== 'undefined') {
+        const doc = document.documentElement;
+        if (mode === 'cyber_sunset') {
+          doc.setAttribute('data-theme', 'cyber-sunset');
+          doc.classList.add('theme-cyber-sunset');
+          doc.classList.remove('theme-light', 'theme-dark-neon');
+        } else if (mode === 'light') {
+          doc.setAttribute('data-theme', 'light');
+          doc.classList.add('theme-light');
+          doc.classList.remove('theme-cyber-sunset', 'theme-dark-neon');
+        } else {
+          doc.setAttribute('data-theme', 'dark-neon');
+          doc.classList.add('theme-dark-neon');
+          doc.classList.remove('theme-cyber-sunset', 'theme-light');
+        }
+      }
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('tasky_app_atmosphere', mode);
+        } catch (e) {}
+      }
+    });
+
+    // Effect 3: Reactive Mascot State Based on Task Completion Load
+    effect(() => {
+      const uncompleted = this.uncompletedCount();
+      const total = this.tasks().length;
+      if (total > 0 && uncompleted === 0) {
+        this.avatarState.set('happy');
+      } else if (uncompleted > 3) {
+        this.avatarState.set('thinking');
+      } else {
+        this.avatarState.set('idle');
+      }
+    });
+  }
 
   readonly tasks = signal<Task[]>([]);
   readonly avatarState = signal<AvatarState>('idle');
@@ -225,6 +304,100 @@ export class App implements OnInit {
     this.initDateLabel();
     this.generateDateTabs();
     this.checkProfileAndInitialize();
+    this.initPwaCheck();
+  }
+
+  private initPwaCheck(): void {
+    if (typeof window === 'undefined') return;
+
+    // Detect mobile platform (iOS vs Android)
+    const ua = navigator.userAgent || '';
+    const isIos = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    this.pwaTutorialPlatform.set(isIos ? 'ios' : 'android');
+
+    // Detect standalone install mode
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+
+    // Catch Chrome/Android install prompt
+    window.addEventListener('beforeinstallprompt', (e: any) => {
+      e.preventDefault();
+      this.deferredPrompt = e;
+      this.canInstallPwa.set(true);
+    });
+
+    // If not standalone and tutorial not dismissed previously, open tutorial after 1.2s
+    if (!isStandalone) {
+      const dismissed = localStorage.getItem('tasky_pwa_dismissed');
+      if (dismissed !== 'true') {
+        setTimeout(() => {
+          this.isPwaTutorialOpen.set(true);
+        }, 1200);
+      }
+    }
+  }
+
+  openPwaTutorial(): void {
+    this.isPwaTutorialOpen.set(true);
+  }
+
+  dismissPwaTutorial(dontShowAgain: boolean = false): void {
+    if (dontShowAgain && typeof window !== 'undefined') {
+      localStorage.setItem('tasky_pwa_dismissed', 'true');
+    }
+    this.isPwaTutorialOpen.set(false);
+  }
+
+  async installPwaDirectly(): Promise<void> {
+    if (!this.deferredPrompt) {
+      this.showToast('مرورگر شما از نصب مستقیم پشتیبانی نمی‌کند، لطفاً از منوی مرورگر استفاده کنید.');
+      return;
+    }
+    this.deferredPrompt.prompt();
+    const { outcome } = await this.deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      this.showToast('اپلیکیشن با موفقیت نصب شد! 🎉');
+      this.isPwaTutorialOpen.set(false);
+      localStorage.setItem('tasky_pwa_dismissed', 'true');
+    }
+    this.deferredPrompt = null;
+    this.canInstallPwa.set(false);
+  }
+
+  onReorderTasks(reordered: Task[]): void {
+    this.tasks.set(reordered);
+    this.apiService.updateTasksOrder(reordered).subscribe({
+      next: () => {
+        this.showToast('ترتیب تسک‌ها با موفقیت تغییر کرد ↕️');
+      },
+      error: (err) => {
+        console.warn('Could not save reordered tasks:', err);
+      }
+    });
+  }
+
+  downloadBackup(): void {
+    this.apiService.downloadBackupFile();
+    this.showToast('نسخه پشتیبان JSON با موفقیت دریافت شد 📥');
+  }
+
+  onRestoreFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = reader.result as string;
+      const res = this.apiService.importBackup(content);
+      if (res.success) {
+        this.showToast(res.message);
+        this.loadTasks(this.selectedDate());
+        this.checkProfileAndInitialize();
+      } else {
+        this.showToast(`خطا در بازیابی: ${res.message} ⚠️`);
+      }
+      input.value = '';
+    };
+    reader.readAsText(file);
   }
 
   openVoiceCapture(): void {
@@ -241,14 +414,14 @@ export class App implements OnInit {
     });
   }
 
-  setAtmosphere(mode: 'dark_neon' | 'cyber_sunset'): void {
+  setAtmosphere(mode: 'dark_neon' | 'cyber_sunset' | 'light'): void {
     this.appAtmosphere.set(mode);
     if (mode === 'cyber_sunset') {
-      document.documentElement.setAttribute('data-theme', 'cyber-sunset');
       this.showToast('اتمسفر به «غروب سایبری» تغییر یافت 🌅');
+    } else if (mode === 'light') {
+      this.showToast('اتمسفر به «تم روشن (روز شفاف)» تغییر یافت ☀️✨');
     } else {
-      document.documentElement.setAttribute('data-theme', 'dark-neon');
-      this.showToast('اتمسفر به «نئون تاریک» بازگشت 🌙✨');
+      this.showToast('اتمسفر به «دارک نئون» بازگشت 🌙✨');
     }
   }
 

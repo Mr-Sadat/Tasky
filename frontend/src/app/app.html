@@ -2,7 +2,7 @@
   <!-- Personalized Onboarding Wizard -->
   <app-wizard (completed)="onWizardCompleted($event)"></app-wizard>
 } @else {
-  <main class="min-h-screen bg-[#0F111A] text-slate-100 flex flex-col justify-between selection:bg-purple-600 selection:text-white relative overflow-x-hidden" dir="rtl">
+  <main class="min-h-screen tasky-bg-base tasky-text-main flex flex-col justify-between selection:bg-purple-600 selection:text-white relative overflow-x-hidden transition-colors duration-300" dir="rtl">
     <!-- Subtle Background Ambient Glow (Controlled & Non-distracting) -->
     <div class="fixed -top-24 -right-24 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
     <div class="fixed -bottom-24 -left-24 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
@@ -74,9 +74,70 @@
       }
 
       <!-- ======================================================== -->
-      <!-- SCREEN 1: HOME VIEW (TODAY'S RHYTHM DASHBOARD)           -->
+      <!-- SCREEN 1: MAIN TASKS VIEW (صفحه اصلی تسک‌ها)             -->
       <!-- ======================================================== -->
-      @if (activeNavTab() === 'home') {
+      @if (activeNavTab() === 'tasks') {
+        <div class="flex-1 space-y-4 py-2 animate-fade-in">
+
+          <!-- Quick Capture Card -->
+          <div 
+            (click)="openVoiceCapture()"
+            class="p-3.5 rounded-2xl tasky-card hover:border-pink-500/30 flex items-center justify-between cursor-pointer transition shadow-md backdrop-blur-xl group interactive-spring select-none"
+            title="ثبت صوتی هوشمند"
+          >
+            <div class="flex items-center gap-3 min-w-0">
+              <!-- Gradient Audio Waveform Square -->
+              <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#7C3AED] to-[#DB2777] flex items-center justify-center text-white shadow-sm shrink-0">
+                <div class="flex items-center justify-center gap-0.5">
+                  <span class="w-0.5 h-3.5 bg-white rounded-full animate-eq-1"></span>
+                  <span class="w-0.5 h-5 bg-white rounded-full animate-eq-2"></span>
+                  <span class="w-0.5 h-2.5 bg-white rounded-full animate-eq-3"></span>
+                  <span class="w-0.5 h-4 bg-white rounded-full animate-eq-4"></span>
+                </div>
+              </div>
+
+              <!-- Quick Capture Text -->
+              <div class="min-w-0">
+                <span class="text-xs font-semibold text-pink-400 block">
+                  ثبت سریع با صوت
+                </span>
+                <span class="text-sm font-bold tasky-text-main block truncate">
+                  هوش مصنوعی آماده شنیدن است
+                </span>
+              </div>
+            </div>
+
+            <!-- Action Pill -->
+            <span class="text-xs font-medium text-slate-400 group-hover:text-pink-300 transition px-2.5 py-1 rounded-full bg-white/5 shrink-0">
+              شروع صحبت
+            </span>
+          </div>
+
+          <!-- Direct Full Task Timeline with Sorting and Up/Down Reorder -->
+          <app-task-timeline
+            (startFocus)="openFocusModal($event)"
+            [tasks]="tasks()"
+            [selectedDate]="selectedDate()"
+            [dateTabs]="dateTabs()"
+            [breakingDownTaskId]="breakingDownTaskId()"
+            (dateSelected)="onDateSelected($event)"
+            (toggleTask)="onToggleTask($event)"
+            (rescheduleTask)="onRescheduleTask($event)"
+            (reorderTasks)="onReorderTasks($event)"
+            (openStoryRecap)="openStoryModal()"
+            (deleteTask)="onDeleteTask($event)"
+            (triggerPanic)="openPanicModal()"
+            (breakdownTask)="onBreakdownTask($event)"
+            (openCalendar)="openCalendarModal()"
+          ></app-task-timeline>
+
+        </div>
+      }
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 2: DASHBOARD VIEW (داشبورد ریتم و تحلیل با effect)  -->
+      <!-- ======================================================== -->
+      @if (activeNavTab() === 'dashboard') {
         <div class="flex-1 space-y-4 py-2 animate-fade-in">
 
           <!-- 1. TASKY IS ONLINE BANNER -->
@@ -362,26 +423,67 @@
             </div>
           </div>
 
-          <!-- 4. EXPANDABLE TASK TIMELINE -->
-          @if (showAllTimeline()) {
-            <div class="pt-2 animate-fade-in">
-              <app-task-timeline
-                (startFocus)="openFocusModal($event)"
-                [tasks]="tasks()"
-                [selectedDate]="selectedDate()"
-                [dateTabs]="dateTabs()"
-                [breakingDownTaskId]="breakingDownTaskId()"
-                (dateSelected)="onDateSelected($event)"
-                (toggleTask)="onToggleTask($event)"
-                (rescheduleTask)="onRescheduleTask($event)"
-                (openStoryRecap)="openStoryModal()"
-                (deleteTask)="onDeleteTask($event)"
-                (triggerPanic)="openPanicModal()"
-                (breakdownTask)="onBreakdownTask($event)"
-                (openCalendar)="openCalendarModal()"
-              ></app-task-timeline>
+          <!-- 4. QUICK TOOLS & SHORTCUTS (اشتراک‌گذاری، پشتیبان‌گیری، PWA) -->
+          <div class="pt-2 space-y-2.5">
+            <h3 class="text-xs font-bold text-slate-400 px-1">ابزارهای سریع داشبورد</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <!-- Share Recap -->
+              <button
+                type="button"
+                (click)="openStoryModal()"
+                class="p-3 rounded-2xl tasky-card hover:border-purple-500/40 text-right flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
+              >
+                <span class="text-xl">📜</span>
+                <div class="mt-2">
+                  <span class="text-xs font-bold tasky-text-main block">کارنامه و اشتراک</span>
+                  <span class="text-[10px] text-slate-400">استوری، واتساپ، تلگرام</span>
+                </div>
+              </button>
+
+              <!-- Backup JSON -->
+              <button
+                type="button"
+                (click)="downloadBackup()"
+                class="p-3 rounded-2xl tasky-card hover:border-emerald-500/40 text-right flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
+              >
+                <span class="text-xl">📥</span>
+                <div class="mt-2">
+                  <span class="text-xs font-bold tasky-text-main block">دانلود پشتیبان</span>
+                  <span class="text-[10px] text-slate-400">خروجی فایل JSON</span>
+                </div>
+              </button>
+
+              <!-- Restore JSON -->
+              <label
+                class="p-3 rounded-2xl tasky-card hover:border-indigo-500/40 text-right flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
+              >
+                <span class="text-xl">📤</span>
+                <div class="mt-2">
+                  <span class="text-xs font-bold tasky-text-main block">بازیابی اطلاعات</span>
+                  <span class="text-[10px] text-slate-400">ورودی فایل JSON</span>
+                </div>
+                <input
+                  type="file"
+                  accept=".json"
+                  class="hidden"
+                  (change)="onRestoreFileSelected($event)"
+                />
+              </label>
+
+              <!-- PWA Install Tutorial -->
+              <button
+                type="button"
+                (click)="openPwaTutorial()"
+                class="p-3 rounded-2xl tasky-card hover:border-pink-500/40 text-right flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
+              >
+                <span class="text-xl">📱</span>
+                <div class="mt-2">
+                  <span class="text-xs font-bold tasky-text-main block">آموزش نصب PWA</span>
+                  <span class="text-[10px] text-slate-400">راهنمای نصب گوشی</span>
+                </div>
+              </button>
             </div>
-          }
+          </div>
 
         </div>
       }
@@ -561,30 +663,45 @@
                 </div>
               </div>
 
-              <!-- Atmosphere Buttons -->
-              <div class="grid grid-cols-2 gap-2 pt-1">
+              <!-- Atmosphere Buttons: 3 Themes -->
+              <div class="grid grid-cols-3 gap-2 pt-1">
+                <!-- Dark Neon -->
                 <button
                   type="button"
                   (click)="setAtmosphere('dark_neon')"
-                  class="py-2.5 px-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
+                  class="py-2.5 px-2 rounded-xl border text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer transition interactive-spring truncate"
                   [ngClass]="appAtmosphere() === 'dark_neon'
                     ? 'bg-purple-950/90 border-purple-500 text-white shadow-sm'
-                    : 'bg-slate-900/60 border-white/[0.08] text-slate-400 hover:text-white'"
+                    : 'tasky-card-subtle border-white/[0.08] text-slate-400 hover:text-white'"
                 >
                   <span>🌙</span>
-                  <span>نئون تاریک</span>
+                  <span class="truncate">دارک نئون</span>
                 </button>
 
+                <!-- Cyber Sunset -->
                 <button
                   type="button"
                   (click)="setAtmosphere('cyber_sunset')"
-                  class="py-2.5 px-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
+                  class="py-2.5 px-2 rounded-xl border text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer transition interactive-spring truncate"
                   [ngClass]="appAtmosphere() === 'cyber_sunset'
-                    ? 'bg-amber-950/90 border-amber-500 text-white shadow-sm'
-                    : 'bg-slate-900/60 border-white/[0.08] text-slate-400 hover:text-white'"
+                    ? 'bg-amber-950/90 border-amber-500 text-amber-200 shadow-sm'
+                    : 'tasky-card-subtle border-white/[0.08] text-slate-400 hover:text-white'"
+                >
+                  <span>🌅</span>
+                  <span class="truncate">غروب سایبری</span>
+                </button>
+
+                <!-- Light Theme -->
+                <button
+                  type="button"
+                  (click)="setAtmosphere('light')"
+                  class="py-2.5 px-2 rounded-xl border text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer transition interactive-spring truncate"
+                  [ngClass]="appAtmosphere() === 'light'
+                    ? 'bg-white border-indigo-500 text-slate-900 shadow-sm font-bold'
+                    : 'tasky-card-subtle border-white/[0.08] text-slate-400 hover:text-white'"
                 >
                   <span>☀️</span>
-                  <span>غروب سایبری</span>
+                  <span class="truncate">تم روشن</span>
                 </button>
               </div>
             </div>
@@ -642,7 +759,7 @@
               <button
                 type="button"
                 (click)="themeService.openStudio()"
-                class="p-3 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] hover:border-purple-400 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
+                class="p-3 rounded-2xl tasky-card hover:border-purple-400 text-xs font-semibold tasky-text-main flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
               >
                 <span>🎨</span>
                 <span>استودیو آواتار</span>
@@ -650,11 +767,71 @@
               <button
                 type="button"
                 (click)="openCalendarModal()"
-                class="p-3 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] hover:border-purple-400 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
+                class="p-3 rounded-2xl tasky-card hover:border-purple-400 text-xs font-semibold tasky-text-main flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
               >
                 <span>🗓️</span>
                 <span>تقویم شمسی</span>
               </button>
+            </div>
+
+            <!-- Backup & Restore JSON Box -->
+            <div class="p-4 rounded-2xl tasky-card shadow-md space-y-3 mt-2">
+              <div class="flex items-center gap-2.5">
+                <span class="text-emerald-400 text-base">💾</span>
+                <div>
+                  <h4 class="text-sm font-semibold tasky-text-main">
+                    پشتیبان‌گیری و بازیابی داده‌ها (JSON)
+                  </h4>
+                  <p class="text-xs text-slate-400">
+                    خروجی گرفتن و انتقال تسک‌ها، ریتم و تنظیمات
+                  </p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  (click)="downloadBackup()"
+                  class="py-2.5 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>📥</span>
+                  <span>دانلود فایل JSON</span>
+                </button>
+
+                <label
+                  class="py-2.5 px-3 rounded-xl bg-purple-600/20 hover:bg-purple-600 border border-purple-500/40 text-purple-300 hover:text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>📤</span>
+                  <span>بازیابی از JSON</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    class="hidden"
+                    (change)="onRestoreFileSelected($event)"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <!-- PWA Guide Banner in Profile -->
+            <div 
+              (click)="openPwaTutorial()"
+              class="p-4 rounded-2xl tasky-card hover:border-pink-500/40 shadow-md flex items-center justify-between cursor-pointer transition interactive-spring"
+            >
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-pink-950/60 border border-pink-500/30 text-pink-300 flex items-center justify-center text-base">
+                  📱
+                </div>
+                <div>
+                  <h4 class="text-sm font-semibold tasky-text-main">
+                    آموزش نصب نسخه اپلیکیشن (PWA)
+                  </h4>
+                  <p class="text-xs text-slate-400">
+                    نصب روی صفحه اصلی آیفون و اندروید
+                  </p>
+                </div>
+              </div>
+              <span class="text-slate-400 text-sm">›</span>
             </div>
 
           </div>
@@ -663,34 +840,51 @@
       }
 
       <!-- ======================================================== -->
-      <!-- FLOATING BOTTOM NAVIGATION BAR                           -->
+      <!-- FLOATING BOTTOM NAVIGATION BAR (RTL Modern Dock)         -->
       <!-- ======================================================== -->
       <nav 
-        class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm rounded-full bg-[#1A1D2B]/95 border border-white/[0.08] backdrop-blur-2xl px-6 py-2 shadow-2xl flex items-center justify-around select-none"
+        class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-md rounded-full tasky-nav border border-white/[0.08] backdrop-blur-2xl px-5 py-2 shadow-2xl flex items-center justify-between select-none"
         dir="rtl"
         aria-label="منوی ناوبری اصلی"
       >
-        <!-- Home Tab -->
+        <!-- Tasks Main Tab -->
         <button
           type="button"
-          (click)="activeNavTab.set('home')"
-          class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200"
-          [ngClass]="activeNavTab() === 'home' ? 'text-white' : 'text-slate-400 hover:text-slate-200'"
-          title="خانه"
+          (click)="activeNavTab.set('tasks')"
+          class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 py-1 px-2.5 rounded-full"
+          [ngClass]="activeNavTab() === 'tasks' ? 'text-purple-400 font-bold' : 'text-slate-400 hover:text-slate-200'"
+          title="تسک‌ها (صفحه اصلی)"
         >
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11l3 3L22 4"></path>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
           </svg>
-          <span class="text-xs font-semibold">خانه</span>
+          <span class="text-[11px]">تسک‌ها</span>
+        </button>
+
+        <!-- Dashboard Tab -->
+        <button
+          type="button"
+          (click)="activeNavTab.set('dashboard')"
+          class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 py-1 px-2.5 rounded-full"
+          [ngClass]="activeNavTab() === 'dashboard' ? 'text-purple-400 font-bold' : 'text-slate-400 hover:text-slate-200'"
+          title="داشبورد ریتم و تحلیل"
+        >
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9" rx="1.5"></rect>
+            <rect x="14" y="3" width="7" height="5" rx="1.5"></rect>
+            <rect x="14" y="12" width="7" height="9" rx="1.5"></rect>
+            <rect x="3" y="16" width="7" height="5" rx="1.5"></rect>
+          </svg>
+          <span class="text-[11px]">داشبورد</span>
         </button>
 
         <!-- Center Glowing Floating AI Microphone Button -->
-        <div class="relative -mt-7 flex items-center justify-center">
+        <div class="relative -mt-6 flex items-center justify-center">
           <button
             type="button"
             (click)="openVoiceCapture()"
-            class="relative w-14 h-14 rounded-full bg-gradient-to-tr from-[#7C3AED] via-[#A855F7] to-[#DB2777] border-4 border-[#0F111A] text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition cursor-pointer select-none"
+            class="relative w-13 h-13 rounded-full bg-gradient-to-tr from-[#7C3AED] via-[#A855F7] to-[#DB2777] border-4 border-[var(--bg-base)] text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition cursor-pointer select-none"
             title="ثبت صوتی هوشمند"
             aria-label="دکمه میکروفون هوش مصنوعی"
           >
@@ -707,15 +901,15 @@
         <button
           type="button"
           (click)="activeNavTab.set('profile')"
-          class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200"
-          [ngClass]="activeNavTab() === 'profile' ? 'text-white' : 'text-slate-400 hover:text-slate-200'"
+          class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 py-1 px-2.5 rounded-full"
+          [ngClass]="activeNavTab() === 'profile' ? 'text-purple-400 font-bold' : 'text-slate-400 hover:text-slate-200'"
           title="پروفایل"
         >
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
-          <span class="text-xs font-semibold">پروفایل</span>
+          <span class="text-[11px]">پروفایل</span>
         </button>
       </nav>
 
@@ -787,6 +981,124 @@
         (dateSelected)="onCalendarDateSelected($event)"
         (close)="closeCalendarModal()"
       ></app-calendar-modal>
+    }
+
+    <!-- PWA Installation Tutorial Modal -->
+    @if (isPwaTutorialOpen()) {
+      <div 
+        class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
+        dir="rtl"
+        (click)="dismissPwaTutorial(false)"
+      >
+        <div 
+          class="w-full max-w-sm rounded-2xl tasky-card border border-white/10 shadow-2xl p-5 space-y-4 text-right"
+          role="dialog"
+          aria-modal="true"
+          (click)="$event.stopPropagation()"
+        >
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-white/10">
+            <div class="flex items-center gap-2.5">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center text-lg shadow-md">
+                📱
+              </div>
+              <div>
+                <h3 class="text-sm font-bold tasky-text-main">نصب نسخه اپلیکیشن (PWA)</h3>
+                <p class="text-[11px] text-slate-400">دسترسی سریع و آفلاین بدون باز کردن مرورگر</p>
+              </div>
+            </div>
+            <button 
+              type="button" 
+              (click)="dismissPwaTutorial(false)" 
+              class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              aria-label="بستن"
+            >
+              ✕
+            </button>
+          </div>
+
+          <!-- Platform Selector Tabs -->
+          <div class="flex items-center gap-1 p-1 rounded-xl bg-slate-950/60 border border-white/10">
+            <button
+              type="button"
+              (click)="pwaTutorialPlatform.set('ios')"
+              class="flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+              [ngClass]="pwaTutorialPlatform() === 'ios' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'"
+            >
+              <span>🍏</span>
+              <span>آیفون (iOS)</span>
+            </button>
+            <button
+              type="button"
+              (click)="pwaTutorialPlatform.set('android')"
+              class="flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+              [ngClass]="pwaTutorialPlatform() === 'android' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'"
+            >
+              <span>🤖</span>
+              <span>اندروید (Chrome)</span>
+            </button>
+          </div>
+
+          <!-- Instructions Content -->
+          @if (pwaTutorialPlatform() === 'ios') {
+            <div class="space-y-2.5 text-xs text-slate-300 leading-relaxed bg-white/5 p-3.5 rounded-xl border border-white/5 animate-fade-in">
+              <div class="flex items-start gap-2">
+                <span class="w-5 h-5 rounded-full bg-purple-600/30 text-purple-300 flex items-center justify-center shrink-0 font-bold text-[10px]">۱</span>
+                <span>در پایین مرورگر سافاری (Safari)، دکمه اشتراک‌گذاری (<strong class="text-white">Share</strong> ⎋) را لمس کنید.</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="w-5 h-5 rounded-full bg-purple-600/30 text-purple-300 flex items-center justify-center shrink-0 font-bold text-[10px]">۲</span>
+                <span>در منوی باز شده به پایین اسکرول کنید و گزینه «<strong class="text-white">Add to Home Screen</strong>» (افزودن به صفحه اصلی ➕) را انتخاب نمایید.</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="w-5 h-5 rounded-full bg-purple-600/30 text-purple-300 flex items-center justify-center shrink-0 font-bold text-[10px]">۳</span>
+                <span>در بالای صفحه سمت راست، دکمه «<strong class="text-white">Add</strong>» را بزنید. آیکون تَسکی روی صفحه گوشی شما قرار خواهد گرفت!</span>
+              </div>
+            </div>
+          } @else {
+            <div class="space-y-2.5 text-xs text-slate-300 leading-relaxed bg-white/5 p-3.5 rounded-xl border border-white/5 animate-fade-in">
+              <div class="flex items-start gap-2">
+                <span class="w-5 h-5 rounded-full bg-purple-600/30 text-purple-300 flex items-center justify-center shrink-0 font-bold text-[10px]">۱</span>
+                <span>در بالای صفحه مرورگر کروم، منوی سه‌نقطه (<strong class="text-white">⋮</strong>) را باز کنید.</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="w-5 h-5 rounded-full bg-purple-600/30 text-purple-300 flex items-center justify-center shrink-0 font-bold text-[10px]">۲</span>
+                <span>گزینه «<strong class="text-white">نصب برنامه</strong>» یا «<strong class="text-white">Add to Home screen</strong>» را بزنید.</span>
+              </div>
+              @if (canInstallPwa()) {
+                <div class="pt-2">
+                  <button
+                    type="button"
+                    (click)="installPwaDirectly()"
+                    class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-xs shadow-lg shadow-purple-950/50 flex items-center justify-center gap-2 cursor-pointer transition"
+                  >
+                    <span>📲</span>
+                    <span>نصب فوری با یک کلیک</span>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Footer Buttons -->
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+            <button
+              type="button"
+              (click)="dismissPwaTutorial(true)"
+              class="text-[11px] text-slate-400 hover:text-rose-300 transition cursor-pointer"
+            >
+              دیگر نشان نده
+            </button>
+            <button
+              type="button"
+              (click)="dismissPwaTutorial(false)"
+              class="px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition cursor-pointer"
+            >
+              متوجه شدم
+            </button>
+          </div>
+        </div>
+      </div>
     }
 
     <!-- AI Thinking Loading Modal Overlay -->
