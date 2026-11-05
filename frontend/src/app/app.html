@@ -19,17 +19,29 @@
           <p class="text-xs text-slate-400 font-medium">
             {{ formattedTodayDate() }}
           </p>
-          <h1 class="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-1.5 mt-0.5">
-            <span>سلام، {{ userProfile()?.name || 'الکس' }}</span>
+          <h1 class="text-xl sm:text-2xl font-bold tasky-text-main tracking-tight flex items-center gap-1.5 mt-0.5">
+            <span>{{ translation.t('app.greeting') }}، {{ userProfile()?.name || 'الکس' }}</span>
             <span class="text-amber-300">✨</span>
           </h1>
         </div>
 
         <!-- Top Status Indicators & Quick Actions -->
         <div class="flex items-center gap-2">
+          <!-- Language Switcher Pill (FA / EN) -->
+          <button
+            type="button"
+            (click)="translation.toggleLanguage()"
+            class="px-2.5 py-1.5 rounded-full tasky-card border border-white/[0.08] hover:border-purple-500/40 text-[11px] font-bold text-purple-300 hover:text-white flex items-center gap-1 shadow-sm transition cursor-pointer interactive-spring select-none"
+            title="تغییر زبان به انگلیسی یا فارسی (تقویم شمسی حفظ می‌شود)"
+            aria-label="تغییر زبان"
+          >
+            <span>🌐</span>
+            <span>{{ translation.currentLang() === 'fa' ? 'EN' : 'فا' }}</span>
+          </button>
+
           <!-- Streak Counter Pill -->
           <div 
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1A1D2B] border border-white/[0.08] text-xs font-bold text-amber-300 shadow-sm select-none interactive-spring"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full tasky-card border border-white/[0.08] text-xs font-bold text-amber-300 shadow-sm select-none interactive-spring"
             title="روزهای استمرار و فعالیت مداوم"
           >
             <span class="text-sm">🔥</span>
@@ -40,8 +52,8 @@
           <button
             type="button"
             (click)="testNotification()"
-            class="w-10 h-10 rounded-full bg-[#1A1D2B] border border-white/[0.08] hover:border-pink-500/40 text-slate-300 hover:text-white flex items-center justify-center relative shadow-sm transition cursor-pointer interactive-spring select-none"
-            title="اعلان‌ها و یادآورهای هوشمند"
+            class="w-10 h-10 rounded-full tasky-card border border-white/[0.08] hover:border-pink-500/40 text-slate-300 hover:text-white flex items-center justify-center relative shadow-sm transition cursor-pointer interactive-spring select-none"
+            title="اعلان‌ها و تست یادآور صوتی"
             aria-label="اعلان‌ها"
           >
             <svg class="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
@@ -79,38 +91,45 @@
       @if (activeNavTab() === 'tasks') {
         <div class="flex-1 space-y-4 py-2 animate-fade-in">
 
-          <!-- Quick Capture Card -->
-          <div 
-            (click)="openVoiceCapture()"
-            class="p-3.5 rounded-2xl tasky-card hover:border-pink-500/30 flex items-center justify-between cursor-pointer transition shadow-md backdrop-blur-xl group interactive-spring select-none"
-            title="ثبت صوتی هوشمند"
-          >
-            <div class="flex items-center gap-3 min-w-0">
-              <!-- Gradient Audio Waveform Square -->
-              <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#7C3AED] to-[#DB2777] flex items-center justify-center text-white shadow-sm shrink-0">
-                <div class="flex items-center justify-center gap-0.5">
-                  <span class="w-0.5 h-3.5 bg-white rounded-full animate-eq-1"></span>
-                  <span class="w-0.5 h-5 bg-white rounded-full animate-eq-2"></span>
-                  <span class="w-0.5 h-2.5 bg-white rounded-full animate-eq-3"></span>
-                  <span class="w-0.5 h-4 bg-white rounded-full animate-eq-4"></span>
-                </div>
+          <!-- Quick Actions: Voice Capture & Manual Add Task -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <!-- Voice Capture -->
+            <div 
+              (click)="openVoiceCapture()"
+              class="p-3 rounded-2xl tasky-card hover:border-pink-500/40 flex items-center gap-2.5 cursor-pointer transition shadow-md backdrop-blur-xl group interactive-spring select-none"
+              title="ثبت صوتی هوشمند و تایپ همزمان"
+            >
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#7C3AED] to-[#DB2777] flex items-center justify-center text-white shadow-sm shrink-0">
+                <span class="text-base">🎙️</span>
               </div>
-
-              <!-- Quick Capture Text -->
               <div class="min-w-0">
-                <span class="text-xs font-semibold text-pink-400 block">
-                  ثبت سریع با صوت
+                <span class="text-[11px] font-semibold text-pink-400 block truncate">
+                  ثبت صوتی
                 </span>
-                <span class="text-sm font-bold tasky-text-main block truncate">
-                  هوش مصنوعی آماده شنیدن است
+                <span class="text-xs font-bold tasky-text-main block truncate">
+                  تایپ زنده صدا
                 </span>
               </div>
             </div>
 
-            <!-- Action Pill -->
-            <span class="text-xs font-medium text-slate-400 group-hover:text-pink-300 transition px-2.5 py-1 rounded-full bg-white/5 shrink-0">
-              شروع صحبت
-            </span>
+            <!-- Manual Add Task -->
+            <div 
+              (click)="openAddTaskModal()"
+              class="p-3 rounded-2xl tasky-card hover:border-purple-500/40 flex items-center gap-2.5 cursor-pointer transition shadow-md backdrop-blur-xl group interactive-spring select-none"
+              title="افزودن تسک جدید با تقویم شمسی"
+            >
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                <span class="text-base">➕</span>
+              </div>
+              <div class="min-w-0">
+                <span class="text-[11px] font-semibold text-purple-400 block truncate">
+                  افزودن تسک
+                </span>
+                <span class="text-xs font-bold tasky-text-main block truncate">
+                  با تقویم شمسی
+                </span>
+              </div>
+            </div>
           </div>
 
           <!-- Direct Full Task Timeline with Sorting and Up/Down Reorder -->
@@ -518,9 +537,22 @@
             <!-- Subtle glow background -->
             <div class="absolute -top-12 -right-12 w-40 h-40 bg-purple-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
-            <!-- Mascot Avatar with Sparkle Star Badge -->
-            <div class="mb-3">
-              <app-tasky-mascot [size]="84" badge="sparkle"></app-tasky-mascot>
+            <!-- Dynamic Avatar (Customized Face, Hair, Eyes, Outfit) -->
+            <div 
+              class="mb-3 relative group cursor-pointer interactive-spring select-none" 
+              (click)="themeService.openStudio()" 
+              title="برای شخصی‌سازی و تغییر چهره آواتار کلیک کنید"
+            >
+              <app-dynamic-avatar 
+                [customization]="themeService.customization()" 
+                [size]="96" 
+                state="happy"
+              ></app-dynamic-avatar>
+              <!-- Studio Button Badge -->
+              <span class="absolute -bottom-1 -left-1 px-2.5 py-0.5 rounded-full bg-purple-600 border border-white/20 text-white text-[10px] font-bold shadow-md flex items-center gap-1 group-hover:scale-105 transition">
+                <span>🎨</span>
+                <span>تغییر چهره</span>
+              </span>
             </div>
 
             <!-- User Name -->
@@ -897,6 +929,20 @@
           </button>
         </div>
 
+        <!-- Add Task Tab Button (Requirement #2) -->
+        <button
+          type="button"
+          (click)="openAddTaskModal()"
+          class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 py-1 px-2.5 rounded-full text-slate-400 hover:text-purple-400 interactive-spring"
+          title="افزودن تسک جدید با تقویم"
+          aria-label="افزودن تسک"
+        >
+          <div class="w-6 h-6 rounded-lg bg-purple-600/20 border border-purple-500/40 text-purple-300 flex items-center justify-center text-sm font-bold shadow-sm">
+            +
+          </div>
+          <span class="text-[11px]">افزودن</span>
+        </button>
+
         <!-- Profile Tab -->
         <button
           type="button"
@@ -981,6 +1027,15 @@
         (dateSelected)="onCalendarDateSelected($event)"
         (close)="closeCalendarModal()"
       ></app-calendar-modal>
+    }
+
+    <!-- Manual Add Task with Jalali Calendar Modal -->
+    @if (isAddTaskModalOpen()) {
+      <app-add-task-modal
+        [initialDateIso]="selectedDate() === 'today' || selectedDate() === 'all' ? getTodayIso() : selectedDate()"
+        (taskCreated)="onTaskCreatedFromModal($event)"
+        (close)="closeAddTaskModal()"
+      ></app-add-task-modal>
     }
 
     <!-- PWA Installation Tutorial Modal -->

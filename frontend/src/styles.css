@@ -138,6 +138,238 @@
   background-image: var(--cta-gradient) !important;
 }
 
+/* ======================================================== */
+/* MOBILE VIEWPORT STABILITY & ZOOM PREVENTION              */
+/* ======================================================== */
+html, body {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  position: relative;
+}
+
+input, textarea, select {
+  font-size: 16px !important; /* Prevents auto-zoom in mobile Safari / Chrome */
+  touch-action: manipulation;
+}
+
+/* ======================================================== */
+/* THEME: LIGHT THEME OVERRIDES (Comprehensive)             */
+/* ======================================================== */
+[data-theme="light"], .theme-light {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+[data-theme="light"] body,
+.theme-light body {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .tasky-bg-base,
+.theme-light .tasky-bg-base {
+  background-color: #F8FAFC !important;
+}
+
+[data-theme="light"] .tasky-card,
+[data-theme="light"] .bg-\[\#1A1D2B\],
+.theme-light .tasky-card,
+.theme-light .bg-\[\#1A1D2B\] {
+  background-color: #FFFFFF !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  color: #0F172A !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03) !important;
+}
+
+[data-theme="light"] .tasky-card-subtle,
+[data-theme="light"] .bg-\[\#0F111A\],
+.theme-light .tasky-card-subtle,
+.theme-light .bg-\[\#0F111A\] {
+  background-color: #F1F5F9 !important;
+  border-color: rgba(15, 23, 42, 0.07) !important;
+  color: #1E293B !important;
+}
+
+[data-theme="light"] .tasky-nav,
+.theme-light .tasky-nav {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme="light"] .text-white,
+[data-theme="light"] .tasky-text-main,
+.theme-light .text-white,
+.theme-light .tasky-text-main {
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .text-slate-100,
+[data-theme="light"] .text-slate-200,
+[data-theme="light"] .tasky-text-sub,
+.theme-light .text-slate-100,
+.theme-light .text-slate-200,
+.theme-light .tasky-text-sub {
+  color: #1E293B !important;
+}
+
+[data-theme="light"] .text-slate-300,
+[data-theme="light"] .text-slate-400,
+[data-theme="light"] .tasky-text-muted,
+.theme-light .text-slate-300,
+.theme-light .text-slate-400,
+.theme-light .tasky-text-muted {
+  color: #64748B !important;
+}
+
+[data-theme="light"] .border-white\/\[0\.08\],
+[data-theme="light"] .border-white\/10,
+[data-theme="light"] .border-white\/5,
+[data-theme="light"] .tasky-border,
+.theme-light .border-white\/\[0\.08\],
+.theme-light .border-white\/10,
+.theme-light .border-white\/5,
+.theme-light .tasky-border {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme="light"] .divide-white\/\[0\.08\],
+.theme-light .divide-white\/\[0\.08\] {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="light"] textarea,
+[data-theme="light"] select,
+.theme-light input:not([type="checkbox"]):not([type="radio"]),
+.theme-light textarea,
+.theme-light select {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder,
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+[data-theme="light"] [role="dialog"],
+.theme-light [role="dialog"] {
+  background-color: #FFFFFF !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #0F172A !important;
+}
+
+/* ======================================================== */
+/* THEME: CYBER SUNSET OVERRIDES (Warm Sunset & Plum)       */
+/* ======================================================== */
+[data-theme="cyber-sunset"], .theme-cyber-sunset {
+  background-color: #160D24 !important;
+  color: #FFF1F2 !important;
+}
+
+[data-theme="cyber-sunset"] body,
+.theme-cyber-sunset body {
+  background-color: #160D24 !important;
+  color: #FFF1F2 !important;
+}
+
+[data-theme="cyber-sunset"] .tasky-bg-base,
+.theme-cyber-sunset .tasky-bg-base {
+  background-color: #160D24 !important;
+}
+
+[data-theme="cyber-sunset"] .tasky-card,
+[data-theme="cyber-sunset"] .bg-\[\#1A1D2B\],
+.theme-cyber-sunset .tasky-card,
+.theme-cyber-sunset .bg-\[\#1A1D2B\] {
+  background-color: #261438 !important;
+  border-color: rgba(244, 63, 94, 0.22) !important;
+  color: #FFF1F2 !important;
+  box-shadow: 0 8px 24px -4px rgba(244, 63, 94, 0.1) !important;
+}
+
+[data-theme="cyber-sunset"] .tasky-card-subtle,
+[data-theme="cyber-sunset"] .bg-\[\#0F111A\],
+.theme-cyber-sunset .tasky-card-subtle,
+.theme-cyber-sunset .bg-\[\#0F111A\] {
+  background-color: #1D0E2E !important;
+  border-color: rgba(244, 63, 94, 0.16) !important;
+  color: #FCE7F3 !important;
+}
+
+[data-theme="cyber-sunset"] .tasky-nav,
+.theme-cyber-sunset .tasky-nav {
+  background-color: rgba(38, 20, 56, 0.94) !important;
+  border-color: rgba(244, 63, 94, 0.25) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="cyber-sunset"] .text-white,
+[data-theme="cyber-sunset"] .tasky-text-main,
+.theme-cyber-sunset .text-white,
+.theme-cyber-sunset .tasky-text-main {
+  color: #FFF1F2 !important;
+}
+
+[data-theme="cyber-sunset"] .text-slate-100,
+[data-theme="cyber-sunset"] .text-slate-200,
+[data-theme="cyber-sunset"] .tasky-text-sub,
+.theme-cyber-sunset .text-slate-100,
+.theme-cyber-sunset .text-slate-200,
+.theme-cyber-sunset .tasky-text-sub {
+  color: #FCE7F3 !important;
+}
+
+[data-theme="cyber-sunset"] .text-slate-300,
+[data-theme="cyber-sunset"] .text-slate-400,
+[data-theme="cyber-sunset"] .tasky-text-muted,
+.theme-cyber-sunset .text-slate-300,
+.theme-cyber-sunset .text-slate-400,
+.theme-cyber-sunset .tasky-text-muted {
+  color: #F472B6 !important;
+}
+
+[data-theme="cyber-sunset"] .border-white\/\[0\.08\],
+[data-theme="cyber-sunset"] .border-white\/10,
+[data-theme="cyber-sunset"] .border-white\/5,
+[data-theme="cyber-sunset"] .tasky-border,
+.theme-cyber-sunset .border-white\/\[0\.08\],
+.theme-cyber-sunset .border-white\/10,
+.theme-cyber-sunset .border-white\/5,
+.theme-cyber-sunset .tasky-border {
+  border-color: rgba(244, 63, 94, 0.22) !important;
+}
+
+[data-theme="cyber-sunset"] .divide-white\/\[0\.08\],
+.theme-cyber-sunset .divide-white\/\[0\.08\] {
+  border-color: rgba(244, 63, 94, 0.22) !important;
+}
+
+[data-theme="cyber-sunset"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="cyber-sunset"] textarea,
+[data-theme="cyber-sunset"] select,
+.theme-cyber-sunset input:not([type="checkbox"]):not([type="radio"]),
+.theme-cyber-sunset textarea,
+.theme-cyber-sunset select {
+  background-color: #1D0E2E !important;
+  color: #FFF1F2 !important;
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+[data-theme="cyber-sunset"] input::placeholder,
+[data-theme="cyber-sunset"] textarea::placeholder,
+.theme-cyber-sunset input::placeholder,
+.theme-cyber-sunset textarea::placeholder {
+  color: #F472B6 !important;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

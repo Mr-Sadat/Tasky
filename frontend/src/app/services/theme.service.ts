@@ -321,7 +321,7 @@ export class ThemeService {
   private applyThemeToDOM(color: ThemeColor): void {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    root.setAttribute('data-theme', color);
+    root.setAttribute('data-accent', color);
 
     const preset = THEME_PRESETS.find((p) => p.id === color) || THEME_PRESETS[0];
     root.style.setProperty('--color-primary', preset.primaryHex);

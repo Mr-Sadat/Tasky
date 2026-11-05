@@ -5,8 +5,19 @@ export const PERSIAN_MONTHS = [
   'دی', 'بهمن', 'اسفند'
 ];
 
+export const JALALI_MONTHS_EN = [
+  'Farvardin', 'Ordibehesht', 'Khordad',
+  'Tir', 'Mordad', 'Shahrivar',
+  'Mehr', 'Aban', 'Azar',
+  'Dey', 'Bahman', 'Esfand'
+];
+
 export const PERSIAN_WEEKDAYS = [
   'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه', 'شنبه'
+];
+
+export const JALALI_WEEKDAYS_EN = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 ];
 
 export const PERSIAN_WEEKDAYS_SHORT = [
@@ -141,20 +152,27 @@ export function getJalaliDateStr(dateInput?: Date | string): string {
 }
 
 /**
- * Returns human-readable Persian date e.g. "۱۲ آبان ۱۴۰۵"
+ * Returns human-readable Persian or English Jalali date e.g. "12 Aban 1405" or "۱۲ آبان ۱۴۰۵"
  */
-export function getJalaliDisplayStr(dateInput?: Date | string): string {
+export function getJalaliDisplayStr(dateInput?: Date | string, lang: 'fa' | 'en' = 'fa'): string {
   const d = parseLocalIsoDate(dateInput);
   const [jy, jm, jd] = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+  if (lang === 'en') {
+    const monthName = JALALI_MONTHS_EN[jm - 1] || '';
+    return `${jd} ${monthName} ${jy}`;
+  }
   const monthName = PERSIAN_MONTHS[jm - 1] || '';
-  return `${jd} ${monthName} ${jy}`;
+  return `${toPersianDigits(jd)} ${monthName} ${toPersianDigits(jy)}`;
 }
 
 /**
- * Returns Persian weekday name e.g. "سه‌شنبه"
+ * Returns Persian or English weekday name e.g. "سه‌شنبه" or "Tuesday"
  */
-export function getJalaliDayNameStr(dateInput?: Date | string): string {
+export function getJalaliDayNameStr(dateInput?: Date | string, lang: 'fa' | 'en' = 'fa'): string {
   const d = parseLocalIsoDate(dateInput);
+  if (lang === 'en') {
+    return JALALI_WEEKDAYS_EN[d.getDay()] || '';
+  }
   return PERSIAN_WEEKDAYS[d.getDay()] || '';
 }
 

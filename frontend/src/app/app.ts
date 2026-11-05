@@ -16,7 +16,10 @@ import { PanicModalComponent } from './components/panic-modal/panic-modal.compon
 import { FocusModalComponent } from './components/focus-modal/focus-modal.component';
 import { CalendarModalComponent } from './components/calendar-modal/calendar-modal.component';
 import { TaskyMascotComponent } from './components/tasky-mascot/tasky-mascot.component';
-import { getJalaliDisplayStr, getTodayIso, toLocalIsoDate, addDaysToIso, toPersianDigits } from './utils/jalali';
+import { DynamicAvatarComponent } from './components/dynamic-avatar/dynamic-avatar.component';
+import { AddTaskModalComponent, NewTaskPayload } from './components/add-task-modal/add-task-modal.component';
+import { TranslationService } from './services/translation.service';
+import { getJalaliDisplayStr, getJalaliDayNameStr, getTodayIso, toLocalIsoDate, addDaysToIso, toPersianDigits } from './utils/jalali';
 
 export interface FocusPreviewItem {
   id: string | number;
@@ -43,6 +46,8 @@ export interface FocusPreviewItem {
     FocusModalComponent,
     CalendarModalComponent,
     TaskyMascotComponent,
+    DynamicAvatarComponent,
+    AddTaskModalComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -51,11 +56,13 @@ export class App implements OnInit {
   @ViewChild(VoiceInputComponent) voiceInputComponent?: VoiceInputComponent;
 
   readonly toPersianDigits = toPersianDigits;
+  readonly getTodayIso = getTodayIso;
 
   private readonly apiService = inject(ApiService);
   readonly notifications = inject(NotificationService);
   readonly themeService = inject(ThemeService);
   readonly ttsService = inject(TtsService);
+  readonly translation = inject(TranslationService);
 
   // Active Tab navigation: 'tasks' (صفحه اصلی) | 'dashboard' (داشبورد هوشمند با effect) | 'profile' (پروفایل و تنظیمات)
   readonly activeNavTab = signal<'tasks' | 'dashboard' | 'profile'>('tasks');
@@ -114,18 +121,34 @@ export class App implements OnInit {
       const mode = this.appAtmosphere();
       if (typeof document !== 'undefined') {
         const doc = document.documentElement;
+        const body = document.body;
         if (mode === 'cyber_sunset') {
           doc.setAttribute('data-theme', 'cyber-sunset');
           doc.classList.add('theme-cyber-sunset');
           doc.classList.remove('theme-light', 'theme-dark-neon');
+          if (body) {
+            body.setAttribute('data-theme', 'cyber-sunset');
+            body.classList.add('theme-cyber-sunset');
+            body.classList.remove('theme-light', 'theme-dark-neon');
+          }
         } else if (mode === 'light') {
           doc.setAttribute('data-theme', 'light');
           doc.classList.add('theme-light');
           doc.classList.remove('theme-cyber-sunset', 'theme-dark-neon');
+          if (body) {
+            body.setAttribute('data-theme', 'light');
+            body.classList.add('theme-light');
+            body.classList.remove('theme-cyber-sunset', 'theme-dark-neon');
+          }
         } else {
           doc.setAttribute('data-theme', 'dark-neon');
           doc.classList.add('theme-dark-neon');
           doc.classList.remove('theme-cyber-sunset', 'theme-light');
+          if (body) {
+            body.setAttribute('data-theme', 'dark-neon');
+            body.classList.add('theme-dark-neon');
+            body.classList.remove('theme-cyber-sunset', 'theme-light');
+          }
         }
       }
       if (typeof window !== 'undefined') {
@@ -135,7 +158,13 @@ export class App implements OnInit {
       }
     });
 
-    // Effect 3: Reactive Mascot State Based on Task Completion Load
+    // Effect 3: Sync Today Date Label with Active Language
+    effect(() => {
+      this.translation.currentLang();
+      this.updateFormattedTodayDate();
+    });
+
+    // Effect 4: Reactive Mascot State Based on Task Completion Load
     effect(() => {
       const uncompleted = this.uncompletedCount();
       const total = this.tasks().length;
@@ -171,6 +200,7 @@ export class App implements OnInit {
   readonly isBriefingLoading = signal<boolean>(false);
   readonly isCheckingProfile = signal<boolean>(true);
   readonly isCalendarModalOpen = signal<boolean>(false);
+  readonly isAddTaskModalOpen = signal<boolean>(false);
 
   /**
    * Computed: count of uncompleted tasks for today
@@ -666,19 +696,53 @@ export class App implements OnInit {
     this.showToast('پروفایل و قوانین هوش مصنوعی به‌روزرسانی شد ✨');
   }
 
-  private initDateLabel(): void {
-    try {
-      const today = new Date();
-      const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-      });
-      this.formattedTodayDate.set(formatter.format(today));
-    } catch (e) {
-      console.warn('Persian Intl formatter failed, using fallback:', e);
-      this.formattedTodayDate.set('امروز');
+  updateFormattedTodayDate(): void {
+    const today = new Date();
+    const lang = this.translation.currentLang();
+    if (lang === 'en') {
+      const weekday = getJalaliDayNameStr(today, 'en');
+      const jalaliStr = getJalaliDisplayStr(today, 'en');
+      this.formattedTodayDate.set(`${weekday}, ${jalaliStr}`);
+    } else {
+      const weekday = getJalaliDayNameStr(today, 'fa');
+      const jalaliStr = getJalaliDisplayStr(today, 'fa');
+      this.formattedTodayDate.set(`${weekday}، ${jalaliStr}`);
     }
+  }
+
+  private initDateLabel(): void {
+    this.updateFormattedTodayDate();
+  }
+
+  openAddTaskModal(): void {
+    this.isAddTaskModalOpen.set(true);
+  }
+
+  closeAddTaskModal(): void {
+    this.isAddTaskModalOpen.set(false);
+  }
+
+  onTaskCreatedFromModal(payload: NewTaskPayload): void {
+    this.apiService.createTask({
+      title: payload.title,
+      date: payload.date,
+      scheduled_time: payload.time,
+      category: payload.category,
+      priority: payload.priority,
+      duration_minutes: payload.durationMinutes,
+      notification_text: payload.hasNotification ? `زمان انجام کار: «${payload.title}» فرا رسیده است!` : undefined,
+    }).subscribe({
+      next: (created) => {
+        this.tasks.update((list) => [...list, created]);
+        this.notifications.scheduleTaskNotifications(this.tasks());
+        this.notifications.playAudioChime();
+        this.showToast('تسک جدید با موفقیت به برنامه اضافه شد ✨');
+        this.closeAddTaskModal();
+      },
+      error: (err) => {
+        this.errorMessage.set('خطا در ذخیره تسک: ' + err.message);
+      }
+    });
   }
 
   private generateDateTabs(): void {

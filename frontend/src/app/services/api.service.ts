@@ -137,75 +137,28 @@ export class ApiService {
     if (!isInit) {
       const todayIso = getTodayIso();
 
-      // Seed initial tasks if empty
+      // Initialize with clean slate (no dummy or test tasks)
       const existing = this.getStoredTasks();
-      if (existing.length === 0) {
-        const defaultTasks: Task[] = [
-          {
-            id: 1,
-            title: 'کلاس فیزیک در دانشگاه',
-            scheduled_time: '10:00',
-            duration_minutes: 60,
-            priority: 'high',
-            category: 'study',
-            icon: 'book',
-            notification_text: 'وقت کلاس فیزیک در دانشگاه رسیده!',
-            is_completed: false,
-            date: todayIso,
-            jalali_date: getJalaliDateStr(todayIso),
-            jalali_display: getJalaliDisplayStr(todayIso),
-            jalali_day_name: getJalaliDayNameStr(todayIso),
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: 2,
-            title: 'کدنویسی و توسعه فرانت‌اند تسکی',
-            scheduled_time: '15:00',
-            duration_minutes: 90,
-            priority: 'high',
-            category: 'work',
-            icon: 'briefcase',
-            notification_text: 'وقت کدنویسی و توسعه فرانت‌اند رسیده!',
-            is_completed: false,
-            date: todayIso,
-            jalali_date: getJalaliDateStr(todayIso),
-            jalali_display: getJalaliDisplayStr(todayIso),
-            jalali_day_name: getJalaliDayNameStr(todayIso),
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: 3,
-            title: 'ورزش و تمرین هوازی',
-            scheduled_time: '18:30',
-            duration_minutes: 45,
-            priority: 'medium',
-            category: 'fitness',
-            icon: 'dumbbell',
-            notification_text: 'وقت ورزش و تمرین هوازی رسیده!',
-            is_completed: false,
-            date: todayIso,
-            jalali_date: getJalaliDateStr(todayIso),
-            jalali_display: getJalaliDisplayStr(todayIso),
-            jalali_day_name: getJalaliDayNameStr(todayIso),
-            created_at: new Date().toISOString(),
-          }
-        ];
-        this.saveStoredTasks(defaultTasks);
+      const cleanTasks = existing.filter(t => 
+        t.title !== 'کلاس فیزیک در دانشگاه' &&
+        t.title !== 'کدنویسی و توسعه فرانت‌اند تسکی' &&
+        t.title !== 'ورزش و تمرین هوازی'
+      );
+      if (cleanTasks.length !== existing.length) {
+        this.saveStoredTasks(cleanTasks);
       }
 
-      // Default user profile
+      // Default clean user profile
       if (!this.getStoredProfile()) {
         const defaultProfile: UserProfile = {
-          name: 'سارا',
+          name: 'الکس',
           wake_time: '07:00',
           sleep_time: '23:30',
-          xp: 45,
-          streak_days: 2,
-          catchphrases: ['دمت گرم', 'بزن بریم', 'حرکت کنیم'],
-          occasions: [
-            { id: 'sample_bday', title: 'تولد بهترین دوستم', date: '08-15', type: 'personal', icon: '🎂' }
-          ],
-          ai_guidelines: '۱. برنامه‌ریزی واقع‌بینانه با فاصله‌های استراحت کوتاه.\n۲. اولویت‌بندی کارهای متمرکز در ساعات اوج انرژی صبحگاهی.\n۳. لحن مثبت، پرانرژی و استفاده از تیکه کلام‌های کاربر.',
+          xp: 0,
+          streak_days: 0,
+          catchphrases: ['بزن بریم', 'حرکت کنیم', 'پرانرژی باش'],
+          occasions: [],
+          ai_guidelines: '۱. برنامه‌ریزی واقع‌بینانه با فاصله‌های استراحت کوتاه.\n۲. اولویت‌بندی کارهای متمرکز در ساعات اوج انرژی صبحگاهی.\n۳. لحن مثبت، پرانرژی و سازنده.',
           avatar_config: {
             faceShape: 'oval',
             skinTone: '#ffd1b3',
