@@ -22,7 +22,7 @@ export interface DetectedTaskPreview {
     <!-- FULL SCREEN AI VOICE CAPTURE / LISTENING MODAL -->
     @if (isModalOpen()) {
       <div 
-        class="fixed inset-0 z-50 bg-[#0F111A]/95 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 text-slate-100 overflow-y-auto select-none animate-fade-in"
+        class="fixed inset-0 z-50 tasky-bg-base backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 tasky-text-main overflow-y-auto select-none animate-fade-in"
         dir="rtl"
       >
         <!-- Modal Inner Centered Container -->
@@ -34,7 +34,7 @@ export interface DetectedTaskPreview {
             <button
               type="button"
               (click)="closeModal()"
-              class="w-10 h-10 rounded-full bg-[#1A1D2B] hover:bg-slate-800 border border-white/[0.08] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer text-sm shadow-sm"
+              class="w-10 h-10 rounded-full tasky-card hover:border-purple-500/40 border border-white/[0.08] text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer text-sm shadow-sm"
               title="بستن"
               aria-label="بستن"
             >
@@ -53,7 +53,7 @@ export interface DetectedTaskPreview {
             <button
               type="button"
               (click)="clearTranscript()"
-              class="w-10 h-10 rounded-full bg-[#1A1D2B] hover:bg-slate-800 border border-white/[0.08] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer text-xs shadow-sm"
+              class="w-10 h-10 rounded-full tasky-card hover:border-purple-500/40 border border-white/[0.08] text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer text-xs shadow-sm"
               title="پاک کردن متن"
               aria-label="پاک کردن"
             >
@@ -94,7 +94,7 @@ export interface DetectedTaskPreview {
             </div>
 
             <!-- Listening Subtitle -->
-            <h3 class="text-sm sm:text-base font-bold text-white mt-3 tracking-tight">
+            <h3 class="text-sm sm:text-base font-bold tasky-text-main mt-3 tracking-tight">
               {{ isPaused() ? 'گوش دادن متوقف شد' : 'صحبت کنید، همزمان تایپ می‌شود...' }}
             </h3>
 
@@ -105,9 +105,9 @@ export interface DetectedTaskPreview {
           </div>
 
           <!-- LIVE TRANSCRIPT CARD (Real-time typed box) -->
-          <div class="w-full bg-[#1A1D2B] border border-white/[0.08] rounded-2xl p-3.5 shadow-xl backdrop-blur-xl mb-3 relative">
+          <div class="w-full tasky-card border border-white/[0.08] rounded-2xl p-3.5 shadow-xl backdrop-blur-xl mb-3 relative">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <span class="text-xs font-semibold tasky-text-main flex items-center gap-1.5">
                 <span>متن صدا و تایپ همزمان</span>
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               </span>
@@ -125,7 +125,7 @@ export interface DetectedTaskPreview {
               [(ngModel)]="customTranscript"
               (ngModelChange)="onTranscriptChange($event)"
               rows="3"
-              class="w-full bg-slate-950/70 border border-purple-500/40 rounded-xl p-3 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-400 leading-relaxed font-sans"
+              class="w-full tasky-card-subtle border border-purple-500/40 rounded-xl p-3 text-xs sm:text-sm tasky-text-main placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-400 leading-relaxed font-sans"
               placeholder="صحبت کنید تا کلمات در این کادر تایپ شوند (یا خودتان اینجا بنویسید)..."
             ></textarea>
 
@@ -150,7 +150,7 @@ export interface DetectedTaskPreview {
             <!-- List of Detected Tasks -->
             @if (detectedTasks().length > 0) {
               @for (task of detectedTasks(); track task.id) {
-                <div class="flex items-center justify-between p-3 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] hover:border-purple-500/30 transition shadow-sm animate-fade-in">
+                <div class="flex items-center justify-between p-3 rounded-2xl tasky-card border border-white/[0.08] hover:border-purple-500/30 transition shadow-sm animate-fade-in">
                   <div class="flex items-center gap-3 min-w-0">
                     <div class="w-9 h-9 rounded-xl bg-purple-950/60 border border-purple-500/30 flex items-center justify-center text-purple-300 shrink-0">
                       @if (task.icon === 'check') {

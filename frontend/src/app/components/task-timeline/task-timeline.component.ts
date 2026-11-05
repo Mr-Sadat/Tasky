@@ -1,7 +1,8 @@
-import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, HostListener, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, HostListener, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Task, TaskPriority, TaskIcon, JalaliDateTab } from '../../models/task.model';
 import { getTodayIso, toPersianDigits } from '../../utils/jalali';
+import { TranslationService } from '../../services/translation.service';
 
 @Component({
   selector: 'app-task-timeline',
@@ -14,10 +15,10 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
         <div class="flex items-center gap-2">
           <span class="text-base font-bold text-slate-100">{{ getHeaderTitle() }}</span>
           <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-purple-300 border border-slate-700">
-            {{ toPersianDigits(tasks.length) }} تسک
+            {{ formatNum(tasks.length) }} {{ translation.t('timeline.tasks_count') }}
           </span>
           <span class="text-xs text-slate-400">
-            ({{ toPersianDigits(completedCount()) }} انجام شده)
+            ({{ formatNum(completedCount()) }} {{ translation.t('timeline.done_count') }})
           </span>
         </div>
 
@@ -28,10 +29,10 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
               type="button"
               (click)="triggerPanic.emit()"
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:brightness-110 active:scale-95 text-white text-xs font-bold shadow-md shadow-rose-950/60 interactive-spring cursor-pointer border border-rose-400/40 select-none transition animate-pulse"
-              title="بازتنظیم هوشمند تسک‌های باقی‌مانده"
+              title="Emergency Reschedule"
             >
               <span>🚨</span>
-              <span>روز من به هم ریخت!</span>
+              <span>{{ translation.t('timeline.panic') }}</span>
             </button>
           }
 
@@ -40,15 +41,15 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
             type="button"
             (click)="openStoryRecap.emit()"
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#DB2777] text-white text-xs font-bold shadow-md shadow-purple-950/50 interactive-spring cursor-pointer border border-purple-400/30 select-none transition"
-            title="کارنامه روزانه"
+            title="Recap & Story"
           >
             <span>📜</span>
-            <span>کارنامه روز من</span>
+            <span>{{ translation.t('timeline.story') }}</span>
           </button>
         </div>
       </div>
 
-      <!-- Horizontal Persian Jalali Date Bar -->
+      <!-- Horizontal Jalali Date Bar -->
       <div class="flex items-center gap-2 overflow-x-auto pb-2 pt-1 no-scrollbar scrollbar-none scroll-smooth touch-pan-x select-none">
         @for (tab of dateTabs; track tab.dateValue) {
           <button
@@ -61,7 +62,7 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
           >
             <span class="font-bold">{{ tab.label }}</span>
             @if (tab.subLabel) {
-              <span class="text-[10px] opacity-75 mt-0.5">{{ toPersianDigits(tab.subLabel) }}</span>
+              <span class="text-[10px] opacity-75 mt-0.5">{{ translation.currentLang() === 'fa' ? toPersianDigits(tab.subLabel) : tab.subLabel }}</span>
             }
           </button>
         }
@@ -71,9 +72,9 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
       @if (tasks.length === 0) {
         <div class="text-center py-12 px-4 rounded-2xl tasky-card border border-dashed border-white/10 backdrop-blur-xl">
           <div class="text-4xl mb-3 select-none">🗓️</div>
-          <h3 class="text-sm font-bold tasky-text-main mb-1">هنوز برنامه‌ای برای این تاریخ نداری!</h3>
+          <h3 class="text-sm font-bold tasky-text-main mb-1">{{ translation.t('timeline.empty_title') }}</h3>
           <p class="text-xs tasky-text-muted max-w-xs mx-auto leading-relaxed">
-            دکمه میکروفون پایین رو لمس کن و کارهایی که می‌خوای انجام بدی رو بگو تا تَسکی هوشمندانه زمان‌بندی کنه.
+            {{ translation.t('timeline.empty_sub') }}
           </p>
         </div>
       }
@@ -103,8 +104,8 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                   [ngClass]="task.is_completed 
                     ? 'bg-purple-600 border-purple-500 text-white shadow-sm' 
                     : 'border-slate-500 hover:border-purple-400 bg-slate-900/50'"
-                  title="تغییر وضعیت تسک"
-                  aria-label="تغییر وضعیت تسک"
+                  [title]="task.is_completed ? 'Done' : 'Mark done'"
+                  aria-label="Toggle task completion"
                 >
                   @if (task.is_completed) {
                     <svg class="w-3.5 h-3.5 fill-none stroke-current stroke-3" viewBox="0 0 24 24">
@@ -131,11 +132,11 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
 
                   <!-- Clean Metadata Row: Time, Priority, Date -->
                   <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <!-- Scheduled Time & Duration Badge in Persian -->
+                    <!-- Scheduled Time & Duration Badge -->
                     <span class="inline-flex items-center gap-1 text-xs text-purple-300 font-medium px-2 py-0.5 rounded-md bg-purple-950/40 border border-purple-800/30">
                       <span>{{ formatTime(task.scheduled_time) }}</span>
                       <span class="text-purple-400/50">•</span>
-                      <span>{{ toPersianDigits(task.duration_minutes) }} دقیقه</span>
+                      <span>{{ formatNum(task.duration_minutes) }} {{ translation.t('timeline.minutes') }}</span>
                     </span>
 
                     <!-- Subtle Priority Indicator -->
@@ -150,7 +151,7 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                     @if (shouldShowDateBadge(task)) {
                       <span class="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
                         <span>📅</span>
-                        <span>{{ toPersianDigits(task.jalali_display || task.jalali_date || task.date) }}</span>
+                        <span>{{ translation.currentLang() === 'fa' ? toPersianDigits(task.jalali_display || task.jalali_date || task.date) : (task.jalali_display || task.jalali_date || task.date) }}</span>
                       </span>
                     }
                   </div>
@@ -167,8 +168,8 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                     [disabled]="i === 0"
                     [class.opacity-20]="i === 0"
                     class="w-6 h-4 rounded bg-white/5 hover:bg-purple-600/30 flex items-center justify-center text-[9px] text-slate-300 hover:text-white transition disabled:cursor-not-allowed cursor-pointer"
-                    title="انتقال به بالا"
-                    aria-label="انتقال تسک به بالا"
+                    title="Move up"
+                    aria-label="Move up"
                   >
                     ▲
                   </button>
@@ -178,8 +179,8 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                     [disabled]="i === tasks.length - 1"
                     [class.opacity-20]="i === tasks.length - 1"
                     class="w-6 h-4 rounded bg-white/5 hover:bg-purple-600/30 flex items-center justify-center text-[9px] text-slate-300 hover:text-white transition disabled:cursor-not-allowed cursor-pointer"
-                    title="انتقال به پایین"
-                    aria-label="انتقال تسک به پایین"
+                    title="Move down"
+                    aria-label="Move down"
                   >
                     ▼
                   </button>
@@ -191,10 +192,10 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                     type="button"
                     (click)="onStartFocus(task)"
                     class="px-2.5 py-1 rounded-xl text-xs font-semibold bg-gradient-to-r from-[#7C3AED] to-[#DB2777] text-white shadow-sm hover:opacity-95 transition cursor-pointer flex items-center gap-1 select-none"
-                    title="شروع تمرکز عمیق (پومودورو)"
+                    title="Focus mode"
                   >
                     <span class="text-xs">⏱️</span>
-                    <span>تمرکز</span>
+                    <span>{{ translation.t('timeline.focus') }}</span>
                   </button>
                 }
 
@@ -222,7 +223,7 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                         (click)="moveTaskUp(i, $event); closeMenu()"
                         class="w-full px-2.5 py-1.5 rounded-xl hover:bg-white/5 text-xs tasky-text-main flex items-center justify-between cursor-pointer transition disabled:opacity-30 disabled:cursor-not-allowed"
                       >
-                        <span>انتقال یک ردیف بالاتر</span>
+                        <span>{{ translation.t('timeline.move_up') }}</span>
                         <span class="text-xs">▲</span>
                       </button>
 
@@ -232,7 +233,7 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                         (click)="moveTaskDown(i, $event); closeMenu()"
                         class="w-full px-2.5 py-1.5 rounded-xl hover:bg-white/5 text-xs tasky-text-main flex items-center justify-between cursor-pointer transition disabled:opacity-30 disabled:cursor-not-allowed"
                       >
-                        <span>انتقال یک ردیف پایین‌تر</span>
+                        <span>{{ translation.t('timeline.move_down') }}</span>
                         <span class="text-xs">▼</span>
                       </button>
 
@@ -244,8 +245,8 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                           (click)="onAddMinutes(task, 15); closeMenu()"
                           class="w-full px-2.5 py-1.5 rounded-xl hover:bg-white/5 text-xs text-slate-200 flex items-center justify-between cursor-pointer transition"
                         >
-                          <span>تمدید ۱۵ دقیقه</span>
-                          <span class="text-[10px] font-mono text-purple-400">+۱۵د</span>
+                          <span>{{ translation.t('timeline.add_15m') }}</span>
+                          <span class="text-[10px] font-mono text-purple-400">+15m</span>
                         </button>
 
                         <button
@@ -253,8 +254,8 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                           (click)="onAddMinutes(task, 30); closeMenu()"
                           class="w-full px-2.5 py-1.5 rounded-xl hover:bg-white/5 text-xs text-slate-200 flex items-center justify-between cursor-pointer transition"
                         >
-                          <span>تمدید ۳۰ دقیقه</span>
-                          <span class="text-[10px] font-mono text-purple-400">+۳۰د</span>
+                          <span>{{ translation.t('timeline.add_30m') }}</span>
+                          <span class="text-[10px] font-mono text-purple-400">+30m</span>
                         </button>
 
                         <button
@@ -262,7 +263,7 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                           (click)="onMoveToTomorrow(task); closeMenu()"
                           class="w-full px-2.5 py-1.5 rounded-xl hover:bg-white/5 text-xs text-slate-200 flex items-center justify-between cursor-pointer transition"
                         >
-                          <span>انتقال به فردا</span>
+                          <span>{{ translation.t('timeline.to_tomorrow') }}</span>
                           <span class="text-xs">⏭️</span>
                         </button>
 
@@ -271,7 +272,7 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                           (click)="onBreakdown(task); closeMenu()"
                           class="w-full px-2.5 py-1.5 rounded-xl hover:bg-white/5 text-xs text-purple-300 flex items-center justify-between cursor-pointer transition"
                         >
-                          <span>خرد کردن تسک</span>
+                          <span>{{ translation.currentLang() === 'en' ? 'Subdivide task' : 'خرد کردن تسک' }}</span>
                           <span class="text-xs">🧩</span>
                         </button>
 
@@ -283,7 +284,7 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
                         (click)="onDelete(task); closeMenu()"
                         class="w-full px-2.5 py-1.5 rounded-xl hover:bg-rose-950/40 text-xs text-rose-300 flex items-center justify-between cursor-pointer transition"
                       >
-                        <span>حذف تسک</span>
+                        <span>{{ translation.t('timeline.delete') }}</span>
                         <span class="text-xs">🗑️</span>
                       </button>
                     </div>
@@ -324,6 +325,7 @@ import { getTodayIso, toPersianDigits } from '../../utils/jalali';
   `
 })
 export class TaskTimelineComponent implements OnInit, OnDestroy {
+  readonly translation = inject(TranslationService);
   readonly toPersianDigits = toPersianDigits;
   readonly openMenuTaskId = signal<string | number | null>(null);
 
@@ -407,19 +409,25 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
     return d.getHours() * 60 + d.getMinutes();
   }
 
+  formatNum(val: any): string {
+    return this.translation.currentLang() === 'fa' ? toPersianDigits(val) : String(val ?? '');
+  }
+
   selectDate(dateValue: string): void {
     this.dateSelected.emit(dateValue);
   }
 
   getHeaderTitle(): string {
+    const isEn = this.translation.currentLang() === 'en';
     if (this.selectedDate === 'all') {
-      return 'همه برنامه‌ها';
+      return this.translation.t('timeline.all_title');
     }
     const tab = this.dateTabs.find(t => t.dateValue === this.selectedDate);
     if (tab) {
-      return `برنامه ${tab.label}${tab.subLabel ? ' (' + toPersianDigits(tab.subLabel) + ')' : ''}`;
+      const sub = tab.subLabel ? ' (' + (isEn ? tab.subLabel : toPersianDigits(tab.subLabel)) + ')' : '';
+      return `${this.translation.t('timeline.schedule_of')} ${tab.label}${sub}`;
     }
-    return 'برنامه روزانه';
+    return this.translation.t('timeline.daily_title');
   }
 
   shouldShowDateBadge(task: Task): boolean {
@@ -464,8 +472,8 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
   formatTime(timeStr: string): string {
     if (!timeStr) return '';
     const parts = timeStr.split(':');
-    if (parts.length < 2) return toPersianDigits(timeStr);
-    return toPersianDigits(`${parts[0]}:${parts[1]}`);
+    if (parts.length < 2) return this.formatNum(timeStr);
+    return `${this.formatNum(parts[0])}:${this.formatNum(parts[1])}`;
   }
 
   isTaskActive(task: Task): boolean {
@@ -510,11 +518,12 @@ export class TaskTimelineComponent implements OnInit, OnDestroy {
   }
 
   getPriorityLabel(priority: TaskPriority): string {
+    const isEn = this.translation.currentLang() === 'en';
     switch (priority) {
-      case 'high': return 'فوری';
-      case 'medium': return 'متوسط';
-      case 'low': return 'معمولی';
-      default: return 'عادی';
+      case 'high': return isEn ? 'Urgent' : 'فوری';
+      case 'medium': return isEn ? 'Medium' : 'متوسط';
+      case 'low': return isEn ? 'Normal' : 'معمولی';
+      default: return isEn ? 'Normal' : 'عادی';
     }
   }
 

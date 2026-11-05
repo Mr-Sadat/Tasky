@@ -25,20 +25,20 @@ import { AvatarEditorComponent } from '../avatar-editor/avatar-editor.component'
     >
       <!-- Modal Container -->
       <div 
-        class="w-full max-w-lg rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-2xl backdrop-blur-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        class="w-full max-w-lg rounded-2xl tasky-card border border-white/[0.08] shadow-2xl backdrop-blur-2xl overflow-hidden flex flex-col max-h-[92vh]"
         (click)="$event.stopPropagation()"
         role="dialog"
         aria-modal="true"
         aria-labelledby="studioModalTitle"
       >
         <!-- Modal Header -->
-        <div class="flex items-center justify-between p-4 border-b border-white/[0.08] bg-[#1A1D2B] shrink-0">
+        <div class="flex items-center justify-between p-4 border-b border-white/[0.08] tasky-card shrink-0">
           <div class="flex items-center gap-2.5">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#7C3AED] to-[#DB2777] flex items-center justify-center text-lg shadow-sm">
               🎨
             </div>
             <div>
-              <h3 id="studioModalTitle" class="text-sm sm:text-base font-bold text-white flex items-center gap-1.5">
+              <h3 id="studioModalTitle" class="text-sm sm:text-base font-bold tasky-text-main flex items-center gap-1.5">
                 <span>استودیو طراحی آواتار</span>
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-medium">سبک هماهنگ</span>
               </h3>
@@ -49,7 +49,7 @@ import { AvatarEditorComponent } from '../avatar-editor/avatar-editor.component'
           <button 
             type="button"
             (click)="closeModal()" 
-            class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
             aria-label="بستن استودیو"
           >
             ✕
@@ -57,10 +57,10 @@ import { AvatarEditorComponent } from '../avatar-editor/avatar-editor.component'
         </div>
 
         <!-- HERO LIVE PREVIEW CANVAS -->
-        <div class="p-3 sm:p-4 bg-[#0F111A] border-b border-white/[0.08] shrink-0">
-          <div class="relative overflow-hidden rounded-2xl bg-[#1A1D2B] border border-white/[0.08] p-3 flex items-center gap-4">
+        <div class="p-3 sm:p-4 tasky-bg-base border-b border-white/[0.08] shrink-0">
+          <div class="relative overflow-hidden rounded-2xl tasky-card border border-white/[0.08] p-3 flex items-center gap-4">
             <!-- Glowing Avatar Circle -->
-            <div class="relative shrink-0 w-24 h-24 sm:w-26 sm:h-26 rounded-2xl bg-[#0F111A] border border-purple-500/30 flex items-center justify-center shadow-lg overflow-hidden">
+            <div class="relative shrink-0 w-24 h-24 sm:w-26 sm:h-26 rounded-2xl tasky-bg-base border border-purple-500/30 flex items-center justify-center shadow-lg overflow-hidden">
               <div class="absolute inset-0 bg-radial from-purple-500/20 to-transparent pointer-events-none"></div>
               <app-dynamic-avatar
                 [customization]="tempCustomization"
@@ -71,8 +71,8 @@ import { AvatarEditorComponent } from '../avatar-editor/avatar-editor.component'
 
             <!-- Speech Bubble & Quick Tools -->
             <div class="flex-1 min-w-0">
-              <div class="bg-slate-800/80 border border-white/[0.06] rounded-xl rounded-tr-none p-2.5 shadow-inner mb-2.5">
-                <p class="text-xs font-medium text-slate-200 leading-snug">
+              <div class="tasky-card-subtle border border-white/[0.08] rounded-xl rounded-tr-none p-2.5 shadow-sm mb-2.5">
+                <p class="text-xs font-medium tasky-text-main leading-snug">
                   {{ reactionText }}
                 </p>
               </div>
@@ -82,7 +82,7 @@ import { AvatarEditorComponent } from '../avatar-editor/avatar-editor.component'
                 <button
                   type="button"
                   (click)="randomizeAvatar()"
-                  class="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 text-purple-200 hover:text-white border border-purple-500/30 transition cursor-pointer interactive-spring"
+                  class="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 hover:text-white border border-purple-500/30 transition cursor-pointer interactive-spring"
                   title="تولید تصادفی استایل جدید"
                 >
                   <span>🎲</span>
@@ -92,7 +92,7 @@ import { AvatarEditorComponent } from '../avatar-editor/avatar-editor.component'
                 <button
                   type="button"
                   (click)="resetAvatar()"
-                  class="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-xl bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition cursor-pointer"
+                  class="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-xl tasky-card-subtle hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 transition cursor-pointer"
                   title="بازنشانی به حالت قبل"
                 >
                   <span>🔄</span>
@@ -104,7 +104,7 @@ import { AvatarEditorComponent } from '../avatar-editor/avatar-editor.component'
         </div>
 
         <!-- REUSABLE AVATAR EDITOR CONTENT (SCROLLABLE) -->
-        <div class="flex-1 overflow-y-auto p-4 bg-[#1A1D2B]">
+        <div class="flex-1 overflow-y-auto p-4 tasky-card">
           <app-avatar-editor
             [customization]="tempCustomization"
             (customizationChange)="onCustomizationChange($event)"
@@ -112,7 +112,7 @@ import { AvatarEditorComponent } from '../avatar-editor/avatar-editor.component'
         </div>
 
         <!-- Modal Footer: Auto-Save Status & Action -->
-        <div class="p-3.5 bg-[#1A1D2B] border-t border-white/[0.08] flex items-center justify-between shrink-0">
+        <div class="p-3.5 tasky-card border-t border-white/[0.08] flex items-center justify-between shrink-0">
           <div class="flex items-center gap-2 text-xs text-emerald-400 font-semibold select-none">
             <span class="flex h-2.5 w-2.5 relative">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>

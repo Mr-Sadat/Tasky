@@ -57,6 +57,7 @@ export class App implements OnInit {
 
   readonly toPersianDigits = toPersianDigits;
   readonly getTodayIso = getTodayIso;
+  readonly formatNum = (val: any) => this.translation.currentLang() === 'fa' ? toPersianDigits(val) : (val !== undefined && val !== null ? String(val) : '');
 
   private readonly apiService = inject(ApiService);
   readonly notifications = inject(NotificationService);
@@ -158,10 +159,11 @@ export class App implements OnInit {
       }
     });
 
-    // Effect 3: Sync Today Date Label with Active Language
+    // Effect 3: Sync Today Date Label & Tabs with Active Language
     effect(() => {
       this.translation.currentLang();
       this.updateFormattedTodayDate();
+      this.generateDateTabs();
     });
 
     // Effect 4: Reactive Mascot State Based on Task Completion Load
@@ -747,31 +749,32 @@ export class App implements OnInit {
 
   private generateDateTabs(): void {
     try {
+      const isEn = this.translation.currentLang() === 'en';
       const tabs: JalaliDateTab[] = [];
       const now = new Date();
 
-      // 1. "امروز"
-      const todayMonthDay = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-        day: 'numeric',
-        month: 'short',
-      }).format(now);
+      // 1. Today
+      const todaySub = isEn
+        ? getJalaliDisplayStr(now, 'en').replace(/ \d{4}$/, '')
+        : new Intl.DateTimeFormat('fa-IR-u-ca-persian', { day: 'numeric', month: 'short' }).format(now);
+
       tabs.push({
-        label: 'امروز',
-        subLabel: todayMonthDay,
+        label: isEn ? 'Today' : 'امروز',
+        subLabel: todaySub,
         dateValue: 'today',
         isToday: true,
       });
 
-      // 2. "فردا"
+      // 2. Tomorrow
       const tomorrow = new Date(now);
       tomorrow.setDate(now.getDate() + 1);
-      const tomorrowMonthDay = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-        day: 'numeric',
-        month: 'short',
-      }).format(tomorrow);
+      const tomorrowSub = isEn
+        ? getJalaliDisplayStr(tomorrow, 'en').replace(/ \d{4}$/, '')
+        : new Intl.DateTimeFormat('fa-IR-u-ca-persian', { day: 'numeric', month: 'short' }).format(tomorrow);
+
       tabs.push({
-        label: 'فردا',
-        subLabel: tomorrowMonthDay,
+        label: isEn ? 'Tomorrow' : 'فردا',
+        subLabel: tomorrowSub,
         dateValue: toLocalIsoDate(tomorrow),
       });
 
@@ -779,36 +782,37 @@ export class App implements OnInit {
       for (let i = 2; i <= 4; i++) {
         const nextDate = new Date(now);
         nextDate.setDate(now.getDate() + i);
-        const weekday = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-          weekday: 'short',
-        }).format(nextDate);
-        const monthDay = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-          day: 'numeric',
-          month: 'short',
-        }).format(nextDate);
-        const iso = toLocalIsoDate(nextDate);
+
+        const weekdayLabel = isEn
+          ? getJalaliDayNameStr(nextDate, 'en').substring(0, 3)
+          : new Intl.DateTimeFormat('fa-IR-u-ca-persian', { weekday: 'short' }).format(nextDate);
+
+        const nextSub = isEn
+          ? getJalaliDisplayStr(nextDate, 'en').replace(/ \d{4}$/, '')
+          : new Intl.DateTimeFormat('fa-IR-u-ca-persian', { day: 'numeric', month: 'short' }).format(nextDate);
 
         tabs.push({
-          label: weekday,
-          subLabel: monthDay,
-          dateValue: iso,
+          label: weekdayLabel,
+          subLabel: nextSub,
+          dateValue: toLocalIsoDate(nextDate),
         });
       }
 
-      // 4. "همه"
+      // 4. All
       tabs.push({
-        label: 'همه',
-        subLabel: 'کل تسک‌ها',
+        label: isEn ? 'All' : 'همه',
+        subLabel: isEn ? 'All Tasks' : 'کل تسک‌ها',
         dateValue: 'all',
       });
 
       this.dateTabs.set(tabs);
     } catch (e) {
       console.warn('Failed to generate full Jalali tabs, using basic tabs:', e);
+      const isEn = this.translation.currentLang() === 'en';
       this.dateTabs.set([
-        { label: 'امروز', dateValue: 'today', isToday: true },
-        { label: 'فردا', dateValue: 'tomorrow' },
-        { label: 'همه', dateValue: 'all' },
+        { label: isEn ? 'Today' : 'امروز', dateValue: 'today', isToday: true },
+        { label: isEn ? 'Tomorrow' : 'فردا', dateValue: 'tomorrow' },
+        { label: isEn ? 'All' : 'همه', dateValue: 'all' },
       ]);
     }
   }

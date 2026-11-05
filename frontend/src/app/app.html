@@ -2,7 +2,10 @@
   <!-- Personalized Onboarding Wizard -->
   <app-wizard (completed)="onWizardCompleted($event)"></app-wizard>
 } @else {
-  <main class="min-h-screen tasky-bg-base tasky-text-main flex flex-col justify-between selection:bg-purple-600 selection:text-white relative overflow-x-hidden transition-colors duration-300" dir="rtl">
+  <main 
+    class="min-h-screen tasky-bg-base tasky-text-main flex flex-col justify-between selection:bg-purple-600 selection:text-white relative overflow-x-hidden transition-colors duration-300" 
+    [dir]="translation.currentLang() === 'en' ? 'ltr' : 'rtl'"
+  >
     <!-- Subtle Background Ambient Glow (Controlled & Non-distracting) -->
     <div class="fixed -top-24 -right-24 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
     <div class="fixed -bottom-24 -left-24 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
@@ -11,7 +14,7 @@
     <div class="w-full max-w-md mx-auto min-h-screen flex flex-col justify-between px-4 pt-5 pb-28 sm:px-5 relative">
       
       <!-- ======================================================== -->
-      <!-- TOP HEADER (Pure RTL Persian Typography)                 -->
+      <!-- TOP HEADER                                               -->
       <!-- ======================================================== -->
       <header class="flex items-center justify-between pb-3 shrink-0">
         <!-- Date & User Greeting -->
@@ -20,7 +23,7 @@
             {{ formattedTodayDate() }}
           </p>
           <h1 class="text-xl sm:text-2xl font-bold tasky-text-main tracking-tight flex items-center gap-1.5 mt-0.5">
-            <span>{{ translation.t('app.greeting') }}، {{ userProfile()?.name || 'الکس' }}</span>
+            <span>{{ translation.t('app.greeting') }}، {{ userProfile()?.name || (translation.currentLang() === 'en' ? 'Alex' : 'الکس') }}</span>
             <span class="text-amber-300">✨</span>
           </h1>
         </div>
@@ -32,8 +35,8 @@
             type="button"
             (click)="translation.toggleLanguage()"
             class="px-2.5 py-1.5 rounded-full tasky-card border border-white/[0.08] hover:border-purple-500/40 text-[11px] font-bold text-purple-300 hover:text-white flex items-center gap-1 shadow-sm transition cursor-pointer interactive-spring select-none"
-            title="تغییر زبان به انگلیسی یا فارسی (تقویم شمسی حفظ می‌شود)"
-            aria-label="تغییر زبان"
+            title="Toggle Language (FA / EN)"
+            aria-label="Toggle Language"
           >
             <span>🌐</span>
             <span>{{ translation.currentLang() === 'fa' ? 'EN' : 'فا' }}</span>
@@ -42,10 +45,10 @@
           <!-- Streak Counter Pill -->
           <div 
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-full tasky-card border border-white/[0.08] text-xs font-bold text-amber-300 shadow-sm select-none interactive-spring"
-            title="روزهای استمرار و فعالیت مداوم"
+            title="Day Streak"
           >
             <span class="text-sm">🔥</span>
-            <span>{{ toPersianDigits(streakDays()) }}</span>
+            <span>{{ formatNum(streakDays()) }}</span>
           </div>
 
           <!-- Notification Bell with Dot Indicator -->
@@ -53,8 +56,8 @@
             type="button"
             (click)="testNotification()"
             class="w-10 h-10 rounded-full tasky-card border border-white/[0.08] hover:border-pink-500/40 text-slate-300 hover:text-white flex items-center justify-center relative shadow-sm transition cursor-pointer interactive-spring select-none"
-            title="اعلان‌ها و تست یادآور صوتی"
-            aria-label="اعلان‌ها"
+            title="Notifications"
+            aria-label="Notifications"
           >
             <svg class="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -86,7 +89,7 @@
       }
 
       <!-- ======================================================== -->
-      <!-- SCREEN 1: MAIN TASKS VIEW (صفحه اصلی تسک‌ها)             -->
+      <!-- SCREEN 1: MAIN TASKS VIEW                                -->
       <!-- ======================================================== -->
       @if (activeNavTab() === 'tasks') {
         <div class="flex-1 space-y-4 py-2 animate-fade-in">
@@ -97,17 +100,17 @@
             <div 
               (click)="openVoiceCapture()"
               class="p-3 rounded-2xl tasky-card hover:border-pink-500/40 flex items-center gap-2.5 cursor-pointer transition shadow-md backdrop-blur-xl group interactive-spring select-none"
-              title="ثبت صوتی هوشمند و تایپ همزمان"
+              title="Voice Capture"
             >
               <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#7C3AED] to-[#DB2777] flex items-center justify-center text-white shadow-sm shrink-0">
                 <span class="text-base">🎙️</span>
               </div>
               <div class="min-w-0">
                 <span class="text-[11px] font-semibold text-pink-400 block truncate">
-                  ثبت صوتی
+                  {{ translation.t('tasks.voice_capture') }}
                 </span>
                 <span class="text-xs font-bold tasky-text-main block truncate">
-                  تایپ زنده صدا
+                  {{ translation.t('tasks.live_typing') }}
                 </span>
               </div>
             </div>
@@ -116,17 +119,17 @@
             <div 
               (click)="openAddTaskModal()"
               class="p-3 rounded-2xl tasky-card hover:border-purple-500/40 flex items-center gap-2.5 cursor-pointer transition shadow-md backdrop-blur-xl group interactive-spring select-none"
-              title="افزودن تسک جدید با تقویم شمسی"
+              title="Add Task"
             >
               <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
                 <span class="text-base">➕</span>
               </div>
               <div class="min-w-0">
                 <span class="text-[11px] font-semibold text-purple-400 block truncate">
-                  افزودن تسک
+                  {{ translation.t('tasks.add_task') }}
                 </span>
                 <span class="text-xs font-bold tasky-text-main block truncate">
-                  با تقویم شمسی
+                  {{ translation.t('tasks.solar_calendar') }}
                 </span>
               </div>
             </div>
@@ -154,6 +157,7 @@
       }
 
       <!-- ======================================================== -->
+      <!-- ======================================================== -->
       <!-- SCREEN 2: DASHBOARD VIEW (داشبورد ریتم و تحلیل با effect)  -->
       <!-- ======================================================== -->
       @if (activeNavTab() === 'dashboard') {
@@ -161,9 +165,9 @@
 
           <!-- 1. TASKY IS ONLINE BANNER -->
           <div 
-            class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] flex items-center justify-between shadow-lg backdrop-blur-xl relative overflow-hidden group cursor-pointer hover:border-purple-500/30 transition interactive-spring"
+            class="p-4 rounded-2xl tasky-card border border-white/[0.08] flex items-center justify-between shadow-lg backdrop-blur-xl relative overflow-hidden group cursor-pointer hover:border-purple-500/30 transition interactive-spring"
             (click)="playDailyBriefing()"
-            title="پخش خلاصه صوتی رادیویی روز"
+            title="Daily Briefing"
           >
             <!-- Mascot with Online Dot -->
             <div class="flex items-center gap-3.5 min-w-0">
@@ -175,13 +179,13 @@
               <div class="min-w-0">
                 <div class="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
                   <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span>تَسکی آنلاین و فعال است</span>
+                  <span>{{ translation.t('dash.mascot_online') }}</span>
                 </div>
-                <h3 class="text-sm sm:text-base font-bold text-white truncate mt-0.5">
-                  آماده‌ای برای جریان دادن به روزت؟
+                <h3 class="text-sm sm:text-base font-bold tasky-text-main truncate mt-0.5">
+                  {{ translation.t('dash.mascot_heading') }}
                 </h3>
                 <p class="text-xs text-slate-400 truncate">
-                  در بازه اوج تمرکز و انرژی روزانه هستی
+                  {{ translation.t('dash.mascot_sub') }}
                 </p>
               </div>
             </div>
@@ -197,8 +201,8 @@
           <!-- 2. QUICK CAPTURE CARD -->
           <div 
             (click)="openVoiceCapture()"
-            class="p-3.5 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] hover:border-pink-500/30 flex items-center justify-between cursor-pointer transition shadow-md backdrop-blur-xl group interactive-spring select-none"
-            title="ثبت صوتی هوشمند"
+            class="p-3.5 rounded-2xl tasky-card border border-white/[0.08] hover:border-pink-500/30 flex items-center justify-between cursor-pointer transition shadow-md backdrop-blur-xl group interactive-spring select-none"
+            title="Voice Capture"
           >
             <div class="flex items-center gap-3 min-w-0">
               <!-- Gradient Audio Waveform Square -->
@@ -214,17 +218,17 @@
               <!-- Quick Capture Text -->
               <div class="min-w-0">
                 <span class="text-xs font-semibold text-pink-400 block">
-                  ثبت سریع با صوت
+                  {{ translation.t('dash.quick_capture_title') }}
                 </span>
-                <span class="text-sm font-bold text-white block truncate">
-                  هوش مصنوعی آماده شنیدن است
+                <span class="text-sm font-bold tasky-text-main block truncate">
+                  {{ translation.t('dash.quick_capture_sub') }}
                 </span>
               </div>
             </div>
 
             <!-- Action Pill -->
             <span class="text-xs font-medium text-slate-400 group-hover:text-pink-300 transition px-2.5 py-1 rounded-full bg-white/5 shrink-0">
-              شروع صحبت
+              {{ translation.t('dash.quick_capture_btn') }}
             </span>
           </div>
 
@@ -234,10 +238,10 @@
             <div class="flex items-center justify-between px-1">
               <div>
                 <span class="text-xs text-slate-400 font-medium block">
-                  روز شما
+                  {{ translation.t('dash.your_day') }}
                 </span>
-                <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
-                  ریتم امروز
+                <h2 class="text-base sm:text-lg font-bold tasky-text-main tracking-tight">
+                  {{ translation.t('dash.rhythm') }}
                 </h2>
               </div>
 
@@ -247,7 +251,7 @@
                 (click)="toggleShowAllTimeline()"
                 class="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer transition select-none"
               >
-                <span>{{ showAllTimeline() ? 'بستن لیست' : 'مشاهده همه' }}</span>
+                <span>{{ showAllTimeline() ? translation.t('dash.close_list') : translation.t('dash.see_all') }}</span>
                 <span class="text-sm">›</span>
               </button>
             </div>
@@ -256,7 +260,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               
               <!-- CARD A: TODAY'S FOCUS -->
-              <div class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-lg backdrop-blur-xl flex flex-col justify-between space-y-4">
+              <div class="p-4 rounded-2xl tasky-card border border-white/[0.08] shadow-lg backdrop-blur-xl flex flex-col justify-between space-y-4">
                 <!-- Card Header -->
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-1.5">
@@ -264,7 +268,7 @@
                       ⚡
                     </div>
                     <span class="text-xs font-bold text-purple-300">
-                      ۳ کانون تمرکز
+                      {{ translation.t('dash.focus_tasks') }}
                     </span>
                   </div>
                   <span class="text-slate-400 text-sm tracking-widest">•••</span>
@@ -273,11 +277,11 @@
                 <!-- Donut Progress Ring & Title -->
                 <div class="flex items-center justify-between gap-3">
                   <div>
-                    <h3 class="text-base font-bold text-white">
-                      تمرکز امروز
+                    <h3 class="text-base font-bold tasky-text-main">
+                      {{ translation.t('dash.today_focus') }}
                     </h3>
                     <p class="text-xs text-slate-400 leading-tight mt-1">
-                      شتابت رو حفظ کن، نزدیک شدی.
+                      {{ translation.t('dash.focus_sub') }}
                     </p>
                   </div>
 
@@ -290,7 +294,7 @@
                         cy="40"
                         r="34"
                         fill="transparent"
-                        stroke="#141724"
+                        stroke="rgba(255,255,255,0.08)"
                         stroke-width="7"
                       />
                       <!-- Glowing Active Gradient Ring -->
@@ -313,27 +317,27 @@
                         </linearGradient>
                       </defs>
                     </svg>
-                    <span class="absolute text-xs font-bold text-white font-mono">
-                      {{ toPersianDigits(focusProgressPercent()) }}٪
+                    <span class="absolute text-xs font-bold tasky-text-main font-mono">
+                      {{ formatNum(focusProgressPercent()) }}%
                     </span>
                   </div>
                 </div>
 
                 <!-- Active Focus Task Inside Card -->
                 <div 
-                  class="p-2.5 rounded-xl bg-[#0F111A]/80 border border-white/[0.05] flex items-center justify-between gap-2.5 group cursor-pointer hover:border-purple-500/30 transition"
+                  class="p-2.5 rounded-xl tasky-card-subtle border border-white/[0.05] flex items-center justify-between gap-2.5 group cursor-pointer hover:border-purple-500/30 transition"
                   (click)="focusTasksPreview()[0] ? onFocusItemClick(focusTasksPreview()[0]) : openVoiceCapture()"
                 >
                   <div class="flex items-center gap-2.5 min-w-0">
                     <button
                       type="button"
                       class="w-6 h-6 rounded-md bg-purple-950/60 border border-purple-500/30 text-purple-300 flex items-center justify-center text-xs shrink-0 hover:bg-purple-600 hover:text-white transition"
-                      title="تکمیل تسک"
+                      title="Done"
                     >
                       ✓
                     </button>
                     <div class="min-w-0">
-                      <h4 class="text-xs font-semibold text-white truncate">
+                      <h4 class="text-xs font-semibold tasky-text-main truncate">
                         {{ focusTasksPreview()[0]?.title }}
                       </h4>
                       <p class="text-xs text-slate-400 truncate mt-0.5">
@@ -360,23 +364,23 @@
               <div class="flex flex-col gap-3.5">
                 
                 <!-- CARD B: VOICE DRAFTS -->
-                <div class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-lg backdrop-blur-xl flex flex-col justify-between">
+                <div class="p-4 rounded-2xl tasky-card border border-white/[0.08] shadow-lg backdrop-blur-xl flex flex-col justify-between">
                   <div class="flex items-center justify-between">
                     <div class="w-8 h-8 rounded-xl bg-pink-950/50 border border-pink-500/30 text-pink-300 flex items-center justify-center text-sm">
                       🎙️
                     </div>
                     <!-- Pink Badge -->
                     <span class="px-2 py-0.5 rounded-full bg-[#DB2777] text-white font-bold text-xs">
-                      {{ toPersianDigits(voiceDraftsCount()) }}
+                      {{ formatNum(voiceDraftsCount()) }}
                     </span>
                   </div>
 
                   <div class="my-2">
-                    <h3 class="text-sm font-bold text-white">
-                      پیش‌نویس‌های صوتی
+                    <h3 class="text-sm font-bold tasky-text-main">
+                      {{ translation.t('dash.voice_drafts') }}
                     </h3>
                     <p class="text-xs text-slate-400">
-                      آماده بررسی
+                      {{ translation.t('dash.voice_drafts_sub') }}
                     </p>
                   </div>
 
@@ -386,7 +390,7 @@
                       type="button"
                       (click)="toggleVoiceDraftPlayback()"
                       class="w-7 h-7 rounded-full bg-pink-600/30 hover:bg-pink-600 border border-pink-400/30 text-pink-200 hover:text-white flex items-center justify-center text-xs transition cursor-pointer shrink-0"
-                      title="پخش پیش‌نویس صوتی"
+                      title="Play Voice Draft"
                     >
                       @if (isVoiceDraftPlaying()) {
                         <span>⏸</span>
@@ -408,15 +412,15 @@
                 </div>
 
                 <!-- CARD C: ENERGY & HABITS -->
-                <div class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-lg backdrop-blur-xl flex flex-col justify-between">
+                <div class="p-4 rounded-2xl tasky-card border border-white/[0.08] shadow-lg backdrop-blur-xl flex flex-col justify-between">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1.5">
                       <span class="text-amber-400 text-sm">⚡</span>
-                      <span class="text-xs font-semibold text-white">سطح انرژی</span>
+                      <span class="text-xs font-semibold tasky-text-main">{{ translation.t('dash.energy_level') }}</span>
                     </div>
                     <!-- Status Badge -->
                     <span class="text-xs font-bold text-emerald-400">
-                      عالی
+                      {{ translation.t('dash.energy_great') }}
                     </span>
                   </div>
 
@@ -433,8 +437,8 @@
 
                   <!-- Habits & Energy Footer Info -->
                   <div class="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-white/[0.05]">
-                    <span>عادت‌ها و پایداری</span>
-                    <span class="font-semibold text-slate-200">۵ از ۶ انجام شد</span>
+                    <span>{{ translation.t('dash.habits_info') }}</span>
+                    <span class="font-semibold text-slate-200">{{ translation.t('dash.habits_done') }}</span>
                   </div>
                 </div>
 
@@ -442,20 +446,20 @@
             </div>
           </div>
 
-          <!-- 4. QUICK TOOLS & SHORTCUTS (اشتراک‌گذاری، پشتیبان‌گیری، PWA) -->
+          <!-- 4. QUICK TOOLS & SHORTCUTS -->
           <div class="pt-2 space-y-2.5">
-            <h3 class="text-xs font-bold text-slate-400 px-1">ابزارهای سریع داشبورد</h3>
+            <h3 class="text-xs font-bold text-slate-400 px-1">{{ translation.t('dash.quick_tools') }}</h3>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <!-- Share Recap -->
               <button
                 type="button"
                 (click)="openStoryModal()"
-                class="p-3 rounded-2xl tasky-card hover:border-purple-500/40 text-right flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
+                class="p-3 rounded-2xl tasky-card hover:border-purple-500/40 text-start flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
               >
                 <span class="text-xl">📜</span>
                 <div class="mt-2">
-                  <span class="text-xs font-bold tasky-text-main block">کارنامه و اشتراک</span>
-                  <span class="text-[10px] text-slate-400">استوری، واتساپ، تلگرام</span>
+                  <span class="text-xs font-bold tasky-text-main block">{{ translation.t('dash.share_recap') }}</span>
+                  <span class="text-[10px] text-slate-400">{{ translation.t('dash.share_sub') }}</span>
                 </div>
               </button>
 
@@ -463,23 +467,23 @@
               <button
                 type="button"
                 (click)="downloadBackup()"
-                class="p-3 rounded-2xl tasky-card hover:border-emerald-500/40 text-right flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
+                class="p-3 rounded-2xl tasky-card hover:border-emerald-500/40 text-start flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
               >
                 <span class="text-xl">📥</span>
                 <div class="mt-2">
-                  <span class="text-xs font-bold tasky-text-main block">دانلود پشتیبان</span>
-                  <span class="text-[10px] text-slate-400">خروجی فایل JSON</span>
+                  <span class="text-xs font-bold tasky-text-main block">{{ translation.t('dash.backup') }}</span>
+                  <span class="text-[10px] text-slate-400">{{ translation.t('dash.backup_sub') }}</span>
                 </div>
               </button>
 
               <!-- Restore JSON -->
               <label
-                class="p-3 rounded-2xl tasky-card hover:border-indigo-500/40 text-right flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
+                class="p-3 rounded-2xl tasky-card hover:border-indigo-500/40 text-start flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
               >
                 <span class="text-xl">📤</span>
                 <div class="mt-2">
-                  <span class="text-xs font-bold tasky-text-main block">بازیابی اطلاعات</span>
-                  <span class="text-[10px] text-slate-400">ورودی فایل JSON</span>
+                  <span class="text-xs font-bold tasky-text-main block">{{ translation.t('dash.restore') }}</span>
+                  <span class="text-[10px] text-slate-400">{{ translation.t('dash.restore_sub') }}</span>
                 </div>
                 <input
                   type="file"
@@ -493,12 +497,12 @@
               <button
                 type="button"
                 (click)="openPwaTutorial()"
-                class="p-3 rounded-2xl tasky-card hover:border-pink-500/40 text-right flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
+                class="p-3 rounded-2xl tasky-card hover:border-pink-500/40 text-start flex flex-col justify-between cursor-pointer transition interactive-spring shadow-sm"
               >
                 <span class="text-xl">📱</span>
                 <div class="mt-2">
-                  <span class="text-xs font-bold tasky-text-main block">آموزش نصب PWA</span>
-                  <span class="text-[10px] text-slate-400">راهنمای نصب گوشی</span>
+                  <span class="text-xs font-bold tasky-text-main block">{{ translation.t('dash.pwa') }}</span>
+                  <span class="text-[10px] text-slate-400">{{ translation.t('dash.pwa_sub') }}</span>
                 </div>
               </button>
             </div>
@@ -517,10 +521,10 @@
           <div class="flex items-center justify-between">
             <div>
               <span class="text-xs text-slate-400 font-medium block">
-                فضای کاربری
+                {{ translation.t('profile.your_space') }}
               </span>
-              <h2 class="text-xl font-bold text-white tracking-tight">
-                پروفایل
+              <h2 class="text-xl font-bold tasky-text-main tracking-tight">
+                {{ translation.t('profile.title') }}
               </h2>
             </div>
             <button
@@ -528,12 +532,12 @@
               (click)="openProfileModal()"
               class="text-xs font-semibold text-purple-400 hover:text-purple-300 transition cursor-pointer"
             >
-              ویرایش
+              {{ translation.t('profile.edit') }}
             </button>
           </div>
 
           <!-- PROFILE HERO CARD -->
-          <div class="p-6 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-xl backdrop-blur-xl flex flex-col items-center text-center relative overflow-hidden">
+          <div class="p-6 rounded-2xl tasky-card border border-white/[0.08] shadow-xl backdrop-blur-xl flex flex-col items-center text-center relative overflow-hidden">
             <!-- Subtle glow background -->
             <div class="absolute -top-12 -right-12 w-40 h-40 bg-purple-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -551,37 +555,37 @@
               <!-- Studio Button Badge -->
               <span class="absolute -bottom-1 -left-1 px-2.5 py-0.5 rounded-full bg-purple-600 border border-white/20 text-white text-[10px] font-bold shadow-md flex items-center gap-1 group-hover:scale-105 transition">
                 <span>🎨</span>
-                <span>تغییر چهره</span>
+                <span>{{ translation.t('profile.change_avatar') }}</span>
               </span>
             </div>
 
             <!-- User Name -->
-            <h3 class="text-lg font-bold text-white tracking-tight">
-              {{ userProfile()?.name || 'الکس مورگان' }}
+            <h3 class="text-lg font-bold tasky-text-main tracking-tight">
+              {{ userProfile()?.name || (translation.currentLang() === 'en' ? 'Alex' : 'الکس') }}
             </h3>
 
             <!-- Level Badge -->
             <div class="mt-1.5 px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/30 text-purple-200 text-xs font-semibold flex items-center gap-1.5 shadow-sm">
               <span class="text-purple-400">⚡</span>
-              <span>سطح {{ toPersianDigits(userLevel()) }} · استاد تمرکز</span>
+              <span>{{ translation.t('profile.level') }} {{ formatNum(userLevel()) }} · {{ translation.t('profile.flow_master') }}</span>
             </div>
 
             <!-- Stats Row: 3 Columns with Clean Dividers -->
             <div class="w-full grid grid-cols-3 divide-x divide-x-reverse divide-white/[0.08] mt-6 pt-4 border-t border-white/[0.08]">
               <!-- Tasks Done -->
               <div class="px-2">
-                <span class="text-base font-bold text-white block">{{ toPersianDigits(tasksDoneStat()) }}</span>
-                <span class="text-xs text-slate-400 leading-tight block mt-0.5">کارهای انجام‌شده</span>
+                <span class="text-base font-bold tasky-text-main block">{{ formatNum(tasksDoneStat()) }}</span>
+                <span class="text-xs text-slate-400 leading-tight block mt-0.5">{{ translation.t('profile.tasks_done') }}</span>
               </div>
               <!-- Voice Memos -->
               <div class="px-2">
-                <span class="text-base font-bold text-white block">{{ toPersianDigits(voiceMemosStat()) }}</span>
-                <span class="text-xs text-slate-400 leading-tight block mt-0.5">یادداشت صوتی</span>
+                <span class="text-base font-bold tasky-text-main block">{{ formatNum(voiceMemosStat()) }}</span>
+                <span class="text-xs text-slate-400 leading-tight block mt-0.5">{{ translation.t('profile.voice_memos') }}</span>
               </div>
               <!-- Day Streak -->
               <div class="px-2">
-                <span class="text-base font-bold text-white block">{{ toPersianDigits(streakDays()) }}</span>
-                <span class="text-xs text-slate-400 leading-tight block mt-0.5">روز استمرار</span>
+                <span class="text-base font-bold tasky-text-main block">{{ formatNum(streakDays()) }}</span>
+                <span class="text-xs text-slate-400 leading-tight block mt-0.5">{{ translation.t('profile.day_streak') }}</span>
               </div>
             </div>
           </div>
@@ -591,10 +595,10 @@
             <div class="flex items-center justify-between px-1">
               <div>
                 <span class="text-xs text-slate-400 font-medium block">
-                  شخصی‌سازی
+                  {{ translation.t('profile.personalize') }}
                 </span>
-                <h3 class="text-sm font-bold text-white">
-                  تمرکز و علایق من
+                <h3 class="text-sm font-bold tasky-text-main">
+                  {{ translation.t('profile.focus_interests') }}
                 </h3>
               </div>
               <button
@@ -602,7 +606,7 @@
                 (click)="openProfileModal()"
                 class="text-xs font-semibold text-purple-400 hover:text-purple-300 cursor-pointer"
               >
-                مدیریت
+                {{ translation.t('profile.manage') }}
               </button>
             </div>
 
@@ -615,10 +619,10 @@
                 class="px-3.5 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer interactive-spring"
                 [ngClass]="profileInterests().includes('coding')
                   ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm'
-                  : 'bg-[#1A1D2B] border-white/[0.08] text-slate-400 hover:text-white'"
+                  : 'tasky-card border-white/[0.08] text-slate-400 hover:text-white'"
               >
                 <span class="font-mono text-purple-400">&#123;&#125;</span>
-                <span>کدنویسی</span>
+                <span>{{ translation.t('interest.coding') }}</span>
               </button>
 
               <!-- Fitness -->
@@ -628,10 +632,10 @@
                 class="px-3.5 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer interactive-spring"
                 [ngClass]="profileInterests().includes('fitness')
                   ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm'
-                  : 'bg-[#1A1D2B] border-white/[0.08] text-slate-400 hover:text-white'"
+                  : 'tasky-card border-white/[0.08] text-slate-400 hover:text-white'"
               >
                 <span>🏃</span>
-                <span>تناسب اندام</span>
+                <span>{{ translation.t('interest.fitness') }}</span>
               </button>
 
               <!-- Study -->
@@ -641,10 +645,10 @@
                 class="px-3.5 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer interactive-spring"
                 [ngClass]="profileInterests().includes('study')
                   ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm'
-                  : 'bg-[#1A1D2B] border-white/[0.08] text-slate-400 hover:text-white'"
+                  : 'tasky-card border-white/[0.08] text-slate-400 hover:text-white'"
               >
                 <span class="font-serif">Aa</span>
-                <span>مطالعه</span>
+                <span>{{ translation.t('interest.study') }}</span>
               </button>
 
               <!-- Creative -->
@@ -654,10 +658,10 @@
                 class="px-3.5 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer interactive-spring"
                 [ngClass]="profileInterests().includes('creative')
                   ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm'
-                  : 'bg-[#1A1D2B] border-white/[0.08] text-slate-400 hover:text-white'"
+                  : 'tasky-card border-white/[0.08] text-slate-400 hover:text-white'"
               >
                 <span>✦</span>
-                <span>خلاقیت</span>
+                <span>{{ translation.t('interest.creative') }}</span>
               </button>
 
               <!-- Mindfulness -->
@@ -667,10 +671,10 @@
                 class="px-3.5 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer interactive-spring"
                 [ngClass]="profileInterests().includes('mindfulness')
                   ? 'bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm'
-                  : 'bg-[#1A1D2B] border-white/[0.08] text-slate-400 hover:text-white'"
+                  : 'tasky-card border-white/[0.08] text-slate-400 hover:text-white'"
               >
                 <span>✧</span>
-                <span>ذهن‌آگاهی</span>
+                <span>{{ translation.t('interest.mindfulness') }}</span>
               </button>
             </div>
           </div>
@@ -678,19 +682,19 @@
           <!-- SECTION: EXPERIENCE -->
           <div class="space-y-3 pt-2">
             <span class="text-xs text-slate-400 font-medium block px-1">
-              تجربه کاربری
+              {{ translation.t('profile.experience') }}
             </span>
 
             <!-- App Atmosphere Card -->
-            <div class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] shadow-md backdrop-blur-xl space-y-3">
+            <div class="p-4 rounded-2xl tasky-card border border-white/[0.08] shadow-md backdrop-blur-xl space-y-3">
               <div class="flex items-center gap-2.5">
                 <span class="text-purple-400 text-sm">🌙</span>
                 <div>
-                  <h4 class="text-sm font-semibold text-white">
-                    فضای اپلیکیشن
+                  <h4 class="text-sm font-semibold tasky-text-main">
+                    {{ translation.t('profile.app_atmosphere') }}
                   </h4>
                   <p class="text-xs text-slate-400">
-                    تنظیم حس‌وحال و ظاهر برنامه
+                    {{ translation.t('profile.app_atmosphere_sub') }}
                   </p>
                 </div>
               </div>
@@ -707,7 +711,7 @@
                     : 'tasky-card-subtle border-white/[0.08] text-slate-400 hover:text-white'"
                 >
                   <span>🌙</span>
-                  <span class="truncate">دارک نئون</span>
+                  <span class="truncate">{{ translation.t('theme.dark_neon') }}</span>
                 </button>
 
                 <!-- Cyber Sunset -->
@@ -720,7 +724,7 @@
                     : 'tasky-card-subtle border-white/[0.08] text-slate-400 hover:text-white'"
                 >
                   <span>🌅</span>
-                  <span class="truncate">غروب سایبری</span>
+                  <span class="truncate">{{ translation.t('theme.cyber_sunset') }}</span>
                 </button>
 
                 <!-- Light Theme -->
@@ -733,7 +737,7 @@
                     : 'tasky-card-subtle border-white/[0.08] text-slate-400 hover:text-white'"
                 >
                   <span>☀️</span>
-                  <span class="truncate">تم روشن</span>
+                  <span class="truncate">{{ translation.t('theme.light') }}</span>
                 </button>
               </div>
             </div>
@@ -741,15 +745,15 @@
             <!-- AI Personality Row -->
             <div 
               (click)="cycleAIPersonality()"
-              class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] flex items-center justify-between cursor-pointer hover:border-purple-500/30 transition shadow-sm"
+              class="p-4 rounded-2xl tasky-card border border-white/[0.08] flex items-center justify-between cursor-pointer hover:border-purple-500/30 transition shadow-sm"
             >
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-300 flex items-center justify-center text-sm">
                   ✦
                 </div>
                 <div>
-                  <h4 class="text-sm font-semibold text-white">
-                    شخصیت هوش مصنوعی
+                  <h4 class="text-sm font-semibold tasky-text-main">
+                    {{ translation.t('profile.ai_personality') }}
                   </h4>
                   <p class="text-xs text-slate-400">
                     {{ aiPersonality() }}
@@ -759,125 +763,48 @@
               <span class="text-slate-400 text-sm">›</span>
             </div>
 
-            <!-- Voice Nudges Row with Modern iOS-Style Toggle Switch -->
-            <div class="p-4 rounded-2xl bg-[#1A1D2B] border border-white/[0.08] flex items-center justify-between shadow-sm">
-              <div class="flex items-center gap-3 min-w-0">
-                <div class="w-8 h-8 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-300 flex items-center justify-center text-sm shrink-0">
-                  〰️
-                </div>
-                <div class="min-w-0">
-                  <h4 class="text-sm font-semibold text-white truncate">
-                    هشدارهای صوتی
-                  </h4>
-                  <p class="text-xs text-slate-400 truncate">
-                    یادآوری صوتی ملایم هنگام کاهش تمرکز
-                  </p>
-                </div>
-              </div>
-
-              <!-- Toggle Switch -->
-              <label class="tasky-toggle-switch shrink-0">
-                <input 
-                  type="checkbox" 
-                  [checked]="voiceNudgesEnabled()" 
-                  (change)="toggleVoiceNudges()"
-                />
-                <span class="tasky-toggle-slider"></span>
-              </label>
-            </div>
-
-            <!-- Quick Access Extra Tools -->
-            <div class="grid grid-cols-2 gap-2 pt-2">
-              <button
-                type="button"
-                (click)="themeService.openStudio()"
-                class="p-3 rounded-2xl tasky-card hover:border-purple-400 text-xs font-semibold tasky-text-main flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
-              >
-                <span>🎨</span>
-                <span>استودیو آواتار</span>
-              </button>
-              <button
-                type="button"
-                (click)="openCalendarModal()"
-                class="p-3 rounded-2xl tasky-card hover:border-purple-400 text-xs font-semibold tasky-text-main flex items-center justify-center gap-2 cursor-pointer transition interactive-spring"
-              >
-                <span>🗓️</span>
-                <span>تقویم شمسی</span>
-              </button>
-            </div>
-
-            <!-- Backup & Restore JSON Box -->
-            <div class="p-4 rounded-2xl tasky-card shadow-md space-y-3 mt-2">
-              <div class="flex items-center gap-2.5">
-                <span class="text-emerald-400 text-base">💾</span>
-                <div>
-                  <h4 class="text-sm font-semibold tasky-text-main">
-                    پشتیبان‌گیری و بازیابی داده‌ها (JSON)
-                  </h4>
-                  <p class="text-xs text-slate-400">
-                    خروجی گرفتن و انتقال تسک‌ها، ریتم و تنظیمات
-                  </p>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  (click)="downloadBackup()"
-                  class="py-2.5 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>📥</span>
-                  <span>دانلود فایل JSON</span>
-                </button>
-
-                <label
-                  class="py-2.5 px-3 rounded-xl bg-purple-600/20 hover:bg-purple-600 border border-purple-500/40 text-purple-300 hover:text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>📤</span>
-                  <span>بازیابی از JSON</span>
-                  <input
-                    type="file"
-                    accept=".json"
-                    class="hidden"
-                    (change)="onRestoreFileSelected($event)"
-                  />
-                </label>
-              </div>
-            </div>
-
-            <!-- PWA Guide Banner in Profile -->
-            <div 
-              (click)="openPwaTutorial()"
-              class="p-4 rounded-2xl tasky-card hover:border-pink-500/40 shadow-md flex items-center justify-between cursor-pointer transition interactive-spring"
-            >
+            <!-- Voice Nudges Row -->
+            <div class="p-4 rounded-2xl tasky-card border border-white/[0.08] flex items-center justify-between shadow-sm">
               <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-pink-950/60 border border-pink-500/30 text-pink-300 flex items-center justify-center text-base">
-                  📱
+                <div class="w-8 h-8 rounded-xl bg-emerald-950/50 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-sm">
+                  🎙️
                 </div>
                 <div>
                   <h4 class="text-sm font-semibold tasky-text-main">
-                    آموزش نصب نسخه اپلیکیشن (PWA)
+                    {{ translation.t('profile.voice_nudges') }}
                   </h4>
                   <p class="text-xs text-slate-400">
-                    نصب روی صفحه اصلی آیفون و اندروید
+                    {{ translation.t('profile.voice_nudges_sub') }}
                   </p>
                 </div>
               </div>
-              <span class="text-slate-400 text-sm">›</span>
+              <!-- Toggle switch -->
+              <button
+                type="button"
+                (click)="toggleVoiceNudges()"
+                class="w-12 h-6.5 rounded-full transition-colors duration-200 ease-in-out relative p-0.5 cursor-pointer focus:outline-none"
+                [ngClass]="voiceNudgesEnabled() ? 'bg-purple-600' : 'bg-slate-700'"
+                role="switch"
+                [attr.aria-checked]="voiceNudgesEnabled()"
+              >
+                <span
+                  class="w-5.5 h-5.5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out block"
+                  [ngClass]="voiceNudgesEnabled() ? 'translate-x-0' : (translation.currentLang() === 'en' ? 'translate-x-5' : '-translate-x-5.5')"
+                ></span>
+              </button>
             </div>
-
           </div>
 
         </div>
       }
 
       <!-- ======================================================== -->
-      <!-- FLOATING BOTTOM NAVIGATION BAR (RTL Modern Dock)         -->
+      <!-- FLOATING BOTTOM NAVIGATION BAR                           -->
       <!-- ======================================================== -->
       <nav 
         class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-md rounded-full tasky-nav border border-white/[0.08] backdrop-blur-2xl px-5 py-2 shadow-2xl flex items-center justify-between select-none"
-        dir="rtl"
-        aria-label="منوی ناوبری اصلی"
+        [dir]="translation.currentLang() === 'en' ? 'ltr' : 'rtl'"
+        aria-label="Navigation"
       >
         <!-- Tasks Main Tab -->
         <button
@@ -885,13 +812,13 @@
           (click)="activeNavTab.set('tasks')"
           class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 py-1 px-2.5 rounded-full"
           [ngClass]="activeNavTab() === 'tasks' ? 'text-purple-400 font-bold' : 'text-slate-400 hover:text-slate-200'"
-          title="تسک‌ها (صفحه اصلی)"
+          [title]="translation.t('nav.tasks')"
         >
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 11l3 3L22 4"></path>
             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
           </svg>
-          <span class="text-[11px]">تسک‌ها</span>
+          <span class="text-[11px]">{{ translation.t('nav.tasks') }}</span>
         </button>
 
         <!-- Dashboard Tab -->
@@ -900,7 +827,7 @@
           (click)="activeNavTab.set('dashboard')"
           class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 py-1 px-2.5 rounded-full"
           [ngClass]="activeNavTab() === 'dashboard' ? 'text-purple-400 font-bold' : 'text-slate-400 hover:text-slate-200'"
-          title="داشبورد ریتم و تحلیل"
+          [title]="translation.t('nav.dashboard')"
         >
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="9" rx="1.5"></rect>
@@ -908,7 +835,7 @@
             <rect x="14" y="12" width="7" height="9" rx="1.5"></rect>
             <rect x="3" y="16" width="7" height="5" rx="1.5"></rect>
           </svg>
-          <span class="text-[11px]">داشبورد</span>
+          <span class="text-[11px]">{{ translation.t('nav.dashboard') }}</span>
         </button>
 
         <!-- Center Glowing Floating AI Microphone Button -->
@@ -917,8 +844,8 @@
             type="button"
             (click)="openVoiceCapture()"
             class="relative w-13 h-13 rounded-full bg-gradient-to-tr from-[#7C3AED] via-[#A855F7] to-[#DB2777] border-4 border-[var(--bg-base)] text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition cursor-pointer select-none"
-            title="ثبت صوتی هوشمند"
-            aria-label="دکمه میکروفون هوش مصنوعی"
+            title="Voice Capture"
+            aria-label="Microphone"
           >
             <svg class="w-6 h-6 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
@@ -929,18 +856,18 @@
           </button>
         </div>
 
-        <!-- Add Task Tab Button (Requirement #2) -->
+        <!-- Add Task Tab Button -->
         <button
           type="button"
           (click)="openAddTaskModal()"
           class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 py-1 px-2.5 rounded-full text-slate-400 hover:text-purple-400 interactive-spring"
-          title="افزودن تسک جدید با تقویم"
-          aria-label="افزودن تسک"
+          [title]="translation.t('nav.add')"
+          aria-label="Add Task"
         >
           <div class="w-6 h-6 rounded-lg bg-purple-600/20 border border-purple-500/40 text-purple-300 flex items-center justify-center text-sm font-bold shadow-sm">
             +
           </div>
-          <span class="text-[11px]">افزودن</span>
+          <span class="text-[11px]">{{ translation.t('nav.add') }}</span>
         </button>
 
         <!-- Profile Tab -->
@@ -949,13 +876,13 @@
           (click)="activeNavTab.set('profile')"
           class="flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 py-1 px-2.5 rounded-full"
           [ngClass]="activeNavTab() === 'profile' ? 'text-purple-400 font-bold' : 'text-slate-400 hover:text-slate-200'"
-          title="پروفایل"
+          [title]="translation.t('nav.profile')"
         >
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
-          <span class="text-[11px]">پروفایل</span>
+          <span class="text-[11px]">{{ translation.t('nav.profile') }}</span>
         </button>
       </nav>
 

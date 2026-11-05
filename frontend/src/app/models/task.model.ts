@@ -1,5 +1,5 @@
 export type TaskPriority = 'high' | 'medium' | 'low';
-export type TaskCategory = 'work' | 'study' | 'fitness' | 'health' | 'shopping' | 'personal' | 'rest';
+export type TaskCategory = 'work' | 'study' | 'fitness' | 'health' | 'shopping' | 'personal' | 'rest' | string;
 export type TaskIcon = 'briefcase' | 'book' | 'dumbbell' | 'heart' | 'cart' | 'star' | 'coffee' | 'moon' | 'sun';
 export type AvatarMood = 'happy' | 'serious' | 'supportive' | 'excited';
 export type AvatarState = 'idle' | 'listening' | 'thinking' | AvatarMood;

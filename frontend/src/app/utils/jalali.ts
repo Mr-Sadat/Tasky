@@ -116,16 +116,25 @@ export function toLocalIsoDate(d: Date = new Date()): string {
 }
 
 /**
- * Safely parses a Date or "YYYY-MM-DD" string into a Date object at local midnight (00:00:00 local time).
- * Fixes JavaScript's UTC midnight parsing of ISO date strings.
+ * Safely parses a Date or "YYYY-MM-DD" / "YYYY/MM/DD" string into a Date object at local midnight.
+ * Automatically recognizes and converts Jalali year strings (1300-1500) to proper Gregorian Date,
+ * preventing historical 14th century Gregorian interpretation bugs.
  */
 export function parseLocalIsoDate(dateInput?: Date | string): Date {
   if (!dateInput) return new Date();
   if (dateInput instanceof Date) return dateInput;
   if (typeof dateInput === 'string') {
     const trimmed = dateInput.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-      const [y, m, d] = trimmed.split('-').map(Number);
+    const match = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+    if (match) {
+      const y = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const d = parseInt(match[3], 10);
+      // If year is Jalali (e.g. 1300 to 1500), convert to Gregorian Date
+      if (y >= 1300 && y <= 1500) {
+        const [gy, gm, gd] = jalaliToGregorian(y, m, d);
+        return new Date(gy, gm - 1, gd);
+      }
       return new Date(y, m - 1, d);
     }
     return new Date(trimmed);

@@ -8,6 +8,7 @@ import {
   getJalaliMonthStartWeekday,
   getTodayJalali,
   jalaliToIso,
+  gregorianToJalali,
   getJalaliDisplayStr,
 } from '../../utils/jalali';
 
@@ -163,20 +164,21 @@ import {
 })
 export class JalaliDatePickerModalComponent implements OnInit {
   @Input() initialDateStr: string = '';
+  @Input() outputFormat: 'iso' | 'jalali' | 'month-day' = 'iso';
   @Output() dateSelected = new EventEmitter<string>();
   @Output() close = new EventEmitter<void>();
 
   readonly persianMonths = PERSIAN_MONTHS;
   readonly weekdayNames = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
 
-  readonly currentYear = signal<number>(1403);
-  readonly currentMonth = signal<number>(8); // آبان
+  readonly currentYear = signal<number>(1405);
+  readonly currentMonth = signal<number>(8); // آبan
   readonly selectedDay = signal<number>(1);
   readonly offsetArray = signal<number[]>([]);
   readonly monthDaysArray = signal<number[]>([]);
   readonly selectedDisplay = signal<string>('');
 
-  includeYear: boolean = false; // Default: MM-DD for recurring occasions
+  includeYear: boolean = true; // Default to full year
 
   @HostListener('window:keydown.escape')
   handleEscape(): void {
@@ -215,11 +217,22 @@ export class JalaliDatePickerModalComponent implements OnInit {
       const y = parseInt(yyyyMatch[1], 10);
       const m = parseInt(yyyyMatch[2], 10);
       const d = parseInt(yyyyMatch[3], 10);
+      // Jalali year
       if (y >= 1300 && y <= 1500) {
         this.currentYear.set(y);
         this.currentMonth.set(m);
         this.selectedDay.set(d);
         this.includeYear = true;
+        return;
+      }
+      // Gregorian year e.g. 2024-2030
+      if (y >= 1900 && y <= 2100) {
+        const [jy, jm, jd] = gregorianToJalali(y, m, d);
+        this.currentYear.set(jy);
+        this.currentMonth.set(jm);
+        this.selectedDay.set(jd);
+        this.includeYear = true;
+        return;
       }
     }
   }
@@ -280,11 +293,21 @@ export class JalaliDatePickerModalComponent implements OnInit {
 
   confirmSelection(): void {
     const y = this.currentYear();
-    const m = String(this.currentMonth()).padStart(2, '0');
-    const d = String(this.selectedDay()).padStart(2, '0');
+    const m = this.currentMonth();
+    const d = this.selectedDay();
 
-    const formatted = this.includeYear ? `${y}/${m}/${d}` : `${m}-${d}`;
-    this.dateSelected.emit(formatted);
+    if (this.outputFormat === 'iso') {
+      const iso = jalaliToIso(y, m, d);
+      this.dateSelected.emit(iso);
+    } else if (this.outputFormat === 'jalali') {
+      const formatted = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      this.dateSelected.emit(formatted);
+    } else {
+      const formatted = this.includeYear
+        ? `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}`
+        : `${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      this.dateSelected.emit(formatted);
+    }
     this.closeModal();
   }
 
